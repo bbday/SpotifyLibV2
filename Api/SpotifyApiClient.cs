@@ -24,11 +24,17 @@ namespace SpotifyLibV2.Api
                 await CreateAndRegister<IHomeClient>()));
             Library = new AsyncLazy<ILibrary>((async () =>
                 await CreateAndRegister<ILibrary>()));
+            PlayerClient = new AsyncLazy<IPlayerClient>((async () =>
+                await CreateAndRegister<IPlayerClient>()));
+            Tracks = new AsyncLazy<ITrack>((async () =>
+                await CreateAndRegister<ITrack>()));
         }
 
         public AsyncLazy<IHomeClient> Home { get; }
         public IEventsService EventsService { get; }
         public IMercuryClient MercuryClient { get; }
+        public AsyncLazy<IPlayerClient> PlayerClient { get; }
+        public AsyncLazy<ITrack> Tracks { get; }
         public AsyncLazy<ILibrary> Library { get; }
 
         /// <summary>
