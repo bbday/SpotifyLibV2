@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web;
 using Connectstate;
+using Google.Protobuf;
 using JetBrains.Annotations;
 using Newtonsoft.Json.Linq;
 using SpotifyLibV2.Api;
@@ -29,9 +32,12 @@ namespace SpotifyLibV2.Connect
         private bool? _previousShuffle;
         private RepeatState? _previousRepeatState;
         private PlayingChangedRequest _currentCluster;
+        private readonly ITokensProvider _tokens;
+        private HttpClient _putclient;
         public SpotifyConnectState(
             IDealerClient dealerClient,
             ISpotifyConnectReceiver receiver,
+            ITokensProvider tokens,
             SpotifyConfiguration config,
             uint initialVolume,
             int volumeSteps)
@@ -39,6 +45,7 @@ namespace SpotifyLibV2.Connect
             _previousPause = null;
             _receiver = receiver;
             _config = config;
+            _tokens = tokens;
 
             this._deviceInfo = InitializeDeviceInfo(initialVolume, volumeSteps);
             this._putState = new PutStateRequest
@@ -49,13 +56,28 @@ namespace SpotifyLibV2.Connect
                     DeviceInfo = _deviceInfo
                 }
             };
-
+            this.ConnectState = InitState();
             dealerClient.AddMessageListener(this,
                 "hm://pusher/v1/connections/",
                 "hm://connect-state/v1/connect/volume",
                 "hm://connect-state/v1/cluster");
         }
         public string ActiveDeviceId { get; private set; }
+        public PlayerState ConnectState { get; }
+        public async Task UpdateState(PutStateReason reason, int playerTime, PlayerState state)
+        {
+            if (_connectionId == null) throw new ArgumentNullException(_connectionId);
+
+            if (playerTime == -1) _putState.HasBeenPlayingForMs = 0L;
+            else _putState.HasBeenPlayingForMs = (ulong)playerTime;
+
+            _putState.PutStateReason = reason;
+            _putState.ClientSideTimestamp = (ulong)TimeProvider.CurrentTimeMillis();
+            _putState.Device.DeviceInfo = _deviceInfo;
+            _putState.Device.PlayerState = state;
+            await PutConnectState(_putState);
+        }
+
         public Task OnMessage(string uri, Dictionary<string, string> headers, byte[] payload)
         {
             switch (uri)
@@ -95,9 +117,11 @@ namespace SpotifyLibV2.Connect
                     {
                         if (!_config.DeviceId.Equals(update.Cluster.ActiveDeviceId)
                             && _putState.IsActive
-                            && (ulong)now > _putState.StartedPlayingAt
-                            && (ulong)ts > _putState.StartedPlayingAt)
-                            _player.NotActive();
+                            && (ulong) now > _putState.StartedPlayingAt
+                            && (ulong) ts > _putState.StartedPlayingAt)
+                        {
+
+                        }
                     }
                     catch (Exception)
                     {
@@ -186,6 +210,8 @@ namespace SpotifyLibV2.Connect
             if (_connectionId != null && _connectionId.Equals(conId)) return;
             _connectionId = conId;
             Debug.WriteLine("Updated Spotify-Connection-Id: " + _connectionId);
+            ConnectState.IsSystemInitiated = true;
+            _ = UpdateState(PutStateReason.NewDevice, -1, ConnectState);
             _receiver.Ready();
         }
         private DeviceInfo InitializeDeviceInfo(uint initialVolume, int volumeSteps)
@@ -221,5 +247,54 @@ namespace SpotifyLibV2.Connect
                     }
                 }
             };
+
+        private static PlayerState InitState()
+        {
+            return new()
+            {
+                PlaybackSpeed = 1.0,
+                SessionId = string.Empty,
+                PlaybackId = string.Empty,
+                ContextRestrictions = new Restrictions(),
+                Options = new ContextPlayerOptions
+                {
+                    RepeatingContext = false,
+                    ShufflingContext = false,
+                    RepeatingTrack = false
+                },
+                PositionAsOfTimestamp = 0,
+                Position = 0,
+                IsPlaying = false
+            };
+        }
+        private async Task PutConnectState([NotNull] PutStateRequest req)
+        {
+            try
+            {
+                _putclient ??= new HttpClient
+                {
+                    BaseAddress = new Uri((await ApResolver.GetClosestSpClient()))
+                };
+                _putclient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer",
+                    _tokens.GetToken("playlist-read").AccessToken);
+                var byteArrayContent = new ByteArrayContent(req.ToByteArray());
+                byteArrayContent.Headers.ContentType = new MediaTypeHeaderValue("application/protobuf");
+                _putclient.DefaultRequestHeaders.Add("X-Spotify-Connection-Id", _connectionId);
+                var res = await _putclient.PutAsync($"/connect-state/v1/devices/{_config.DeviceId}", byteArrayContent);
+
+                if (res.IsSuccessStatusCode)
+                {
+                    Debug.WriteLine("Put new connect state:");
+                }
+                else
+                {
+                    Debugger.Break();
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("Failed updating state.", ex);
+            }
+        }
     }
 }

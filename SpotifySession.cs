@@ -125,6 +125,7 @@ namespace SpotifyLibV2
                 new SpotifyConnectClient(dealerClient, player,
                     connectInterface, 
                     SpotifyApiClient.EventsService,
+                    SpotifyApiClient.Tokens,
                     SpotifyApiClient.PlayerClient,
                     Configuration);
             SpotifyConnectClient = connectClient;
