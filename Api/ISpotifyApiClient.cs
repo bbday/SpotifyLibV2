@@ -9,6 +9,9 @@ namespace SpotifyLibV2.Api
     public interface ISpotifyApiClient
     {
         AsyncLazy<IHomeClient> Home { get; }
+        ITokensProvider Tokens { get; }
+        IEventsService EventsService { get; }
         IMercuryClient MercuryClient { get; }
+        AsyncLazy<ILibrary> Library { get; }
     }
 }

@@ -287,7 +287,6 @@ namespace SpotifyLibV2
             }
         }
 
-
         private (MemoryStream Accumulator, byte[] APresponseBytes) WriteAccumulator(byte[] clientHelloBytes)
         {
 

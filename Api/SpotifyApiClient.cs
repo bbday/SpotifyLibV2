@@ -18,12 +18,18 @@ namespace SpotifyLibV2.Api
         {
             MercuryClient = mercuryClient;
             Tokens = new TokenProvider(mercuryClient);
+            EventsService = new EventsService(mercuryClient);
+
             Home = new AsyncLazy<IHomeClient>((async () => 
                 await CreateAndRegister<IHomeClient>()));
+            Library = new AsyncLazy<ILibrary>((async () =>
+                await CreateAndRegister<ILibrary>()));
         }
 
         public AsyncLazy<IHomeClient> Home { get; }
+        public IEventsService EventsService { get; }
         public IMercuryClient MercuryClient { get; }
+        public AsyncLazy<ILibrary> Library { get; }
 
         /// <summary>
         /// Way to fetch token. Rn the supported scope is "playlist-read" which provides access to all endpoints.

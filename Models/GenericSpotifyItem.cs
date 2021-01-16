@@ -97,6 +97,37 @@ namespace SpotifyLibV2.Models
         [JsonIgnore]
         public int ContextIndex { get; set; }
 
+        public bool InLibrary
+        {
+            get => _inLibrary;
+            set
+            {
+                _inLibrary = value;
+                OnPropertyChanged(nameof(InLibrary));
+            }
+        }
+        public bool CurrentlyPlaying
+        {
+            get => _currentlyPlaying;
+            set
+            {
+                _currentlyPlaying = value;
+                OnPropertyChanged(nameof(CurrentlyPlaying));
+            }
+        }
+        public bool InFocus
+        {
+            get => _inFocus;
+            set
+            {
+                _inFocus = value;
+                OnPropertyChanged(nameof(InFocus));
+            }
+        }
+        private bool _inLibrary;
+        private bool _currentlyPlaying;
+        private bool _inFocus;
+
         public event PropertyChangedEventHandler PropertyChanged;
 
         [NotifyPropertyChangedInvocator]
