@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 using Spotify;
 using SpotifyLibV2.Abstractions;
 using SpotifyLibV2.Api;
@@ -16,7 +17,9 @@ namespace SpotifyLibV2.Interfaces
         ISpotifyApiClient SpotifyApiClient { get; }
         ISpotifyReceiver SpotifyReceiver { get; }
         ISpotifyConnectClient SpotifyConnectClient { get; }
+        List<ISocialPresence> SocialPresenceListeners { get; }
         string CountryCode { get; }
+        void AttachSocialPresence(ISocialPresence socialpresence);
 
         ISpotifyConnectClient AttachClient(ISpotifyConnectReceiver connectInterface,
             ISpotifyPlayer player,

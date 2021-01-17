@@ -62,7 +62,7 @@ namespace SpotifyLibV2.Connect
                 "hm://connect-state/v1/connect/volume",
                 "hm://connect-state/v1/cluster");
         }
-        public string ActiveDeviceId { get; private set; }
+        public string ActiveDeviceId { get; set; }
         public PlayerState ConnectState { get; }
         public async Task UpdateState(PutStateReason reason, int playerTime, PlayerState state)
         {

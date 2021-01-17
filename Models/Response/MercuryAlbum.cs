@@ -44,6 +44,8 @@ namespace SpotifyLibV2.Models.Response
         public List<string> Copyrights { get; set; }
         [JsonIgnore]
         public string DerivedFrom { get; set; }
+
+        public new string Type { get; set; }
     }
 
     public class AdditionalReleases

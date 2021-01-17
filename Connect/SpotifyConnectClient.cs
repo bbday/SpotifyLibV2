@@ -5,7 +5,9 @@ using SpotifyLibV2.Connect.Interfaces;
 using SpotifyLibV2.Enums;
 using SpotifyLibV2.Models.Public;
 using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
+using SpotifyLibV2.Models.Request;
 
 namespace SpotifyLibV2.Connect
 {
@@ -16,18 +18,23 @@ namespace SpotifyLibV2.Connect
         private readonly IDealerClient _dealerClient;
         private readonly ISpotifyConnectState _connectState;
         private readonly AsyncLazy<IPlayerClient> _playerApi;
+        private readonly SpotifyConfiguration _config;
+        private readonly AsyncLazy<IConnectState> _connectApi;
         public SpotifyConnectClient(
             IDealerClient dealerClient, 
             ISpotifyPlayer player, 
             ISpotifyConnectReceiver receiver, 
             IEventsService events,
             ITokensProvider tokens,
+            AsyncLazy<IConnectState> connectApi,
             AsyncLazy<IPlayerClient> playerApi,
             SpotifyConfiguration config)
         {
             _dealerClient = dealerClient;
             _player = player;
             _playerApi = playerApi;
+            _connectApi = connectApi;
+            _config = config;
             _connectState = new SpotifyConnectState(dealerClient, receiver,
                 tokens,
                 config,
@@ -54,6 +61,25 @@ namespace SpotifyLibV2.Connect
             {
                 return null;
             }
+        }
+
+        public async Task<bool> RequestPlay(RemoteRequest request)
+        {
+            if (_connectState.ActiveDeviceId == null)
+            {
+                var t = await (await _playerApi).GetCurrentPlayback();
+                _connectState.ActiveDeviceId = t.Device?.Id;
+            }
+            var resp =
+                await (await _connectApi).TransferState(_config.DeviceId,
+                    _connectState.ActiveDeviceId, request);
+            if (!resp.IsSuccessStatusCode)
+            {
+                Debugger.Break();
+                return false;
+            }
+
+            return true;
         }
     }
 }

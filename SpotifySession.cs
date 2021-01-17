@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,6 +18,7 @@ using SpotifyLibV2.Exceptions;
 using SpotifyLibV2.Interfaces;
 using SpotifyLibV2.Listeners;
 using SpotifyLibV2.Mercury;
+using SpotifyLibV2.Models.Public;
 
 namespace SpotifyLibV2
 {
@@ -47,6 +50,7 @@ namespace SpotifyLibV2
             SpotifyConfiguration config,
             SpotifyClient spotifyClient)
         {
+            SocialPresenceListeners = new List<ISocialPresence>();
             Configuration = config;
             ListenersHolder.SpotifySessionConcurrentDictionary.Add(this);
             _keys = new DiffieHellman();
@@ -111,7 +115,40 @@ namespace SpotifyLibV2
             }
             private set => _spotifyConnectClient = value;
         }
+
+        public List<ISocialPresence> SocialPresenceListeners { get; }
         public string CountryCode { get; set; }
+
+        public void AttachSocialPresence(ISocialPresence socialpresence)
+        {
+            SocialPresenceListeners.Add(socialpresence);
+            //socialpresence
+            var handler = new SocialHandler(socialpresence);
+            var usersSubscribed =
+                SpotifyApiClient.MercuryClient
+                    .SendSync(new ProtobuffedMercuryRequest<Spotify.Social.UserListReply>(
+                        RawMercuryRequest.Get(
+                            $"hm://socialgraph/subscriptions/user/{ApWelcome.CanonicalUsername}?count=200&last_result="),
+                        Spotify.Social.UserListReply.Parser));
+            foreach (var user in usersSubscribed.Users)
+            {
+                try
+                {
+                    var response = SpotifyApiClient.MercuryClient
+                        .SendSync(new JsonMercuryRequest<UserPresence>(
+                            RawMercuryRequest.Get($"hm://presence2/user/{user.Username}")));
+                    socialpresence.IncomingPresence(response);
+                }
+                catch (Exception x)
+                {
+                    Debug.WriteLine(x.ToString());
+                }
+
+                SpotifyApiClient.MercuryClient
+                    .Subscribe($"hm://presence2/user/{user.Username}",
+                        handler);
+            }
+        }
 
         public ISpotifyConnectClient AttachClient(
             ISpotifyConnectReceiver connectInterface,
@@ -126,6 +163,7 @@ namespace SpotifyLibV2
                     connectInterface, 
                     SpotifyApiClient.EventsService,
                     SpotifyApiClient.Tokens,
+                    SpotifyApiClient.ConnectApi,
                     SpotifyApiClient.PlayerClient,
                     Configuration);
             SpotifyConnectClient = connectClient;

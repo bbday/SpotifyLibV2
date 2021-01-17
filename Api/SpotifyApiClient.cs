@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Nito.AsyncEx;
 using Org.BouncyCastle.Asn1.Ocsp;
 using Refit;
+using SpotifyLib.Api;
 using SpotifyLibV2.Attributes;
 using SpotifyLibV2.Mercury;
 
@@ -28,14 +29,33 @@ namespace SpotifyLibV2.Api
                 await CreateAndRegister<IPlayerClient>()));
             Tracks = new AsyncLazy<ITrack>((async () =>
                 await CreateAndRegister<ITrack>()));
+            PathFinder = new AsyncLazy<IPathFinder>(
+                async () => await CreateAndRegister<IPathFinder>());
+
+            Album = new AsyncLazy<IAlbum>((async () =>
+                await CreateAndRegister<IAlbum>()));
+            Artist = new AsyncLazy<IArtist>(
+                async () => await CreateAndRegister<IArtist>());
+            Playlist = new AsyncLazy<IPlaylist>((async () =>
+                await CreateAndRegister<IPlaylist>()));
+            User = new AsyncLazy<IUserService>(
+                async () => await CreateAndRegister<IUserService>());
+            ConnectApi = new AsyncLazy<IConnectState>(async () => 
+                await CreateAndRegister<IConnectState>());
         }
 
         public AsyncLazy<IHomeClient> Home { get; }
         public IEventsService EventsService { get; }
         public IMercuryClient MercuryClient { get; }
+        public AsyncLazy<IPathFinder> PathFinder { get; }
         public AsyncLazy<IPlayerClient> PlayerClient { get; }
         public AsyncLazy<ITrack> Tracks { get; }
+        public AsyncLazy<IConnectState> ConnectApi { get; }
         public AsyncLazy<ILibrary> Library { get; }
+        public AsyncLazy<IAlbum> Album { get; }
+        public AsyncLazy<IArtist> Artist { get; }
+        public AsyncLazy<IPlaylist> Playlist { get; }
+        public AsyncLazy<IUserService> User { get; }
 
         /// <summary>
         /// Way to fetch token. Rn the supported scope is "playlist-read" which provides access to all endpoints.

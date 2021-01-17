@@ -9,7 +9,7 @@ namespace SpotifyLibV2.Connect.Interfaces
 {
     public interface ISpotifyConnectState
     {
-        string ActiveDeviceId { get;  }
+        string ActiveDeviceId { get; set; }
         PlayerState ConnectState { get; }
         Task UpdateState([NotNull] PutStateReason reason,
             int playerTime,

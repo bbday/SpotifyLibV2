@@ -1,4 +1,5 @@
 ﻿using Spotify;
+using SpotifyLibV2.Interfaces;
 
 namespace SpotifyLibV2.Listeners
 {
