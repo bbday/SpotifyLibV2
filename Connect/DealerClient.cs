@@ -196,7 +196,8 @@ namespace SpotifyLibV2.Connect
                                 foreach (var listener
                                     in _playlistListener)
                                 {
-                                    if (DecodeHermesPlaylist(payload, out var update))
+                                    if (!DecodeHermesPlaylist(payload, out var update)) continue;
+                                    if (listener.Key == update.Playlist.Uri)
                                     {
                                         listener.Value.PlaylistUpdate(update);
                                     }

@@ -24,11 +24,9 @@ namespace SpotifyLibV2
 {
     public class SpotifySession : ISpotifySessionListener, ISpotifySession
     {
-        private static IMemoryCache _cache;
-
         private readonly DiffieHellman _keys;
         private ISpotifyConnectClient _spotifyConnectClient;
-
+        private static MemoryCache _cache;
         private SpotifySession(
             LoginCredentials credentials,
             SpotifyConfiguration config,
@@ -52,7 +50,20 @@ namespace SpotifyLibV2
             SpotifyReceiver = new SpotifyReceiver(spotifyClient.GetStream(), mercuryClient, new CancellationToken());
         }
 
-        public static IMemoryCache Cache => _cache ??= new MemoryCache(new MemoryCacheOptions());
+        public static IMemoryCache MemoryCache
+        {
+            get
+            {
+                if(_cache == null)
+                {
+                    _cache = new MemoryCache(new MemoryCacheOptions());
+                }
+
+                return _cache;
+            }
+        }
+
+        public static ICache Cache { get; private set; }
         public APWelcome ApWelcome { get; set; }
         public APLoginFailed ApLoginFailed { get; set; }
         public SpotifyConfiguration Configuration { get; }
@@ -115,6 +126,11 @@ namespace SpotifyLibV2
             {
                 throw new InvalidOperationException("Something terribly went wrong.");
             }
+        }
+
+        public void SetCache(ICache cache)
+        {
+            Cache = cache;
         }
 
         public ISpotifyConnectClient AttachClient(

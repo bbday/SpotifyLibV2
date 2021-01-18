@@ -35,7 +35,7 @@ namespace SpotifyLibV2.Ids
                 if (regexMatch.Success)
                 {
                     this.Id = regexMatch.Groups[1].Value;
-                    this.Username = regexMatch.Groups[1].Value;
+                    this.Username = null;
                     PlaylistType = PlaylistType.UserPlaylist;
                 }
                 else
@@ -61,7 +61,7 @@ namespace SpotifyLibV2.Ids
 
         public string Uri { get; }
         public string Id { get; }
-        public string Username { get; }
+        public string Username { get; set; }
 
         public string ToHexId()
         {

@@ -19,5 +19,6 @@ namespace SpotifyLibV2.Api
         AsyncLazy<IArtist> Artist { get; }
         AsyncLazy<IPlaylist> Playlist { get; }
         AsyncLazy<IUserService> User { get; }
+        AsyncLazy<IMetadata> Metadata { get; }
     }
 }

@@ -42,6 +42,9 @@ namespace SpotifyLibV2.Api
                 async () => await CreateAndRegister<IUserService>());
             ConnectApi = new AsyncLazy<IConnectState>(async () => 
                 await CreateAndRegister<IConnectState>());
+
+            Metadata = new AsyncLazy<IMetadata>(async () =>
+                await CreateAndRegister<IMetadata>());
         }
 
         public AsyncLazy<IHomeClient> Home { get; }
@@ -56,6 +59,7 @@ namespace SpotifyLibV2.Api
         public AsyncLazy<IArtist> Artist { get; }
         public AsyncLazy<IPlaylist> Playlist { get; }
         public AsyncLazy<IUserService> User { get; }
+        public AsyncLazy<IMetadata> Metadata { get; }
 
         /// <summary>
         /// Way to fetch token. Rn the supported scope is "playlist-read" which provides access to all endpoints.

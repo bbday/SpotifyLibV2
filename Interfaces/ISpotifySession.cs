@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Caching.Memory;
 using Spotify;
 using SpotifyLibV2.Abstractions;
 using SpotifyLibV2.Api;
@@ -22,6 +23,7 @@ namespace SpotifyLibV2.Interfaces
         string CountryCode { get; }
         void AttachSocialPresence(ISocialPresence socialpresence);
         void AttachPlaylistListener(string uri, IPlaylistListener listener);
+        void SetCache(ICache cache);
         ISpotifyConnectClient AttachClient(ISpotifyConnectReceiver connectInterface,
             ISpotifyPlayer player,
             WebsocketHandler handler);

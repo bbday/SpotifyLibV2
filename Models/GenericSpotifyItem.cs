@@ -37,7 +37,7 @@ namespace SpotifyLibV2.Models
                 // SpotifySession.MusicListeners.AddOrUpdate(value, this);
                 Id = value.Split(':').LastOrDefault();
                 _uri = value;
-                if (Type != SpotifyType.Track) return;
+                if (Type != default(SpotifyType)) return;
                 switch (value.Split(':')[1])
                 {
                     case "track":
