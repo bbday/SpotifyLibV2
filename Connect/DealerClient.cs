@@ -6,8 +6,10 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Google.Protobuf;
 using JetBrains.Annotations;
 using Newtonsoft.Json.Linq;
 using Org.BouncyCastle.Utilities;
@@ -15,8 +17,12 @@ using SpotifyLibV2.Abstractions;
 using SpotifyLibV2.Api;
 using SpotifyLibV2.Connect.Interfaces;
 using SpotifyLibV2.Enums;
+using SpotifyLibV2.Helpers;
+using SpotifyLibV2.Helpers.Extensions;
+using SpotifyLibV2.Ids;
 using SpotifyLibV2.Listeners;
 using SpotifyLibV2.Models;
+using SpotifyLibV2.Models.Public;
 using SpotifyLibV2.Models.Request;
 
 namespace SpotifyLibV2.Connect
@@ -28,11 +34,13 @@ namespace SpotifyLibV2.Connect
         private bool _closed = false;
         private bool _receivedPong = false;
 
-        private readonly ConcurrentDictionary<IMessageListener, List<string>> _msgListeners = new ConcurrentDictionary<IMessageListener, List<string>>();
-        private readonly ManualResetEvent _msgListenersLock = new ManualResetEvent(false);
+        private readonly ConcurrentDictionary<string, IPlaylistListener>
+            _playlistListener = new();
+        private readonly ConcurrentDictionary<IMessageListener, List<string>> _msgListeners = new();
+        private readonly ManualResetEvent _msgListenersLock = new(false);
 
-        private readonly ConcurrentDictionary<string, IRequestListener> _reqListeners = new ConcurrentDictionary<string, IRequestListener>();
-        private readonly ManualResetEvent _reqListenersLock = new ManualResetEvent(false);
+        private readonly ConcurrentDictionary<string, IRequestListener> _reqListeners = new();
+        private readonly ManualResetEvent _reqListenersLock = new(false);
 
 
         public DealerClient(
@@ -56,7 +64,7 @@ namespace SpotifyLibV2.Connect
 
         private void WebSocketOnSocketDisconnected(object sender, WebsocketclosedEventArgs e)
         {
-            throw new NotImplementedException();
+           // throw new NotImplementedException();
         }
 
         private async void WebSocketOnMessageReceivedAsync(object sender, string e)
@@ -144,7 +152,7 @@ namespace SpotifyLibV2.Connect
             var uri = obj["uri"]?.ToString();
             var headers = GetHeaders(obj);
             var payloads = (JArray)obj["payloads"];
-            byte[] decodedPayload;
+            byte[] decodedPayload = null;
             if (payloads != null)
             {
                 if (headers.ContainsKey("Content-Type")
@@ -154,7 +162,7 @@ namespace SpotifyLibV2.Connect
                     if (payloads.Count > 1) throw new InvalidOperationException();
                     decodedPayload = Encoding.Default.GetBytes(payloads[0].ToString());
                 }
-                else
+                else if(headers.Any())
                 {
                     var payloadsStr = new string[payloads.Count];
                     for (var i = 0; i < payloads.Count; i++) payloadsStr[i] = payloads[i].ToString();
@@ -171,6 +179,31 @@ namespace SpotifyLibV2.Connect
                     }
 
                     decodedPayload = @in.ToArray();
+                }
+                else
+                {
+                    //    const playlistRegex = /hm:\/\/playlist\/v2\/playlist\/[\w\d]+/i;
+                    var playlistRegEx = Regex.Match(uri, @"hm:\/\/playlist\/v2\/playlist\/[\w\d]+");
+                    if (playlistRegEx.Success)
+                    {
+                        var payloadsStr = new string[payloads.Count];
+                        for (var i = 0; i < payloads.Count; i++) payloadsStr[i] = payloads[i].ToString();
+                        //playlist/collection
+                        foreach (var payload in payloadsStr)
+                        {
+                            lock (_playlistListener)
+                            {
+                                foreach (var listener
+                                    in _playlistListener)
+                                {
+                                    if (DecodeHermesPlaylist(payload, out var update))
+                                    {
+                                        listener.Value.PlaylistUpdate(update);
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
             else
@@ -210,6 +243,24 @@ namespace SpotifyLibV2.Connect
         {
             var headers = obj["headers"] as JObject;
             return headers.ToObject<Dictionary<string, string>>();
+        }
+        private static bool DecodeHermesPlaylist(string payload, out HermesPlaylistUpdate hermes)
+        {
+            var bytes = Convert.FromBase64String(payload);
+            try
+            {
+                var modification = Spotify.Playlist4.Proto
+                    .PlaylistModificationInfo.Parser.ParseFrom(bytes);
+                hermes = new HermesPlaylistUpdate(PlaylistId.FromHex(modification.Uri.ToByteArray().BytesToHex()),
+                    modification.Ops);
+            }
+            catch (InvalidProtocolBufferException x)
+            {
+                Debug.WriteLine(x.ToString());
+                hermes = null;
+                return false;
+            }
+            return true;
         }
 
         public void Dispose()
@@ -272,6 +323,18 @@ namespace SpotifyLibV2.Connect
 
                 _msgListeners.TryAdd(listener, uris.ToList());
                 _msgListenersLock.Set();
+            }
+        }
+        public void AddPlaylistListener([NotNull] IPlaylistListener listener,
+            [NotNull] string uri)
+        {
+            lock (_playlistListener)
+            {
+                if (_playlistListener.ContainsKey(uri))
+                    throw new ArgumentException($"A listener for {uri} has already been added.");
+
+                _playlistListener.TryAdd(uri, listener);
+                //_playlistListener.Set();
             }
         }
         public void RemoveMessageListener([NotNull] IMessageListener listener)

@@ -6,6 +6,7 @@ using SpotifyLibV2.Api;
 using SpotifyLibV2.Config;
 using SpotifyLibV2.Connect;
 using SpotifyLibV2.Connect.Interfaces;
+using SpotifyLibV2.Listeners;
 
 namespace SpotifyLibV2.Interfaces
 {
@@ -20,7 +21,7 @@ namespace SpotifyLibV2.Interfaces
         List<ISocialPresence> SocialPresenceListeners { get; }
         string CountryCode { get; }
         void AttachSocialPresence(ISocialPresence socialpresence);
-
+        void AttachPlaylistListener(string uri, IPlaylistListener listener);
         ISpotifyConnectClient AttachClient(ISpotifyConnectReceiver connectInterface,
             ISpotifyPlayer player,
             WebsocketHandler handler);

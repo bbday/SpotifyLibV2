@@ -2,6 +2,7 @@
 {
     public enum SpotifyType
     {
+        Unknown,
         Track,
         Artist,
         Show,

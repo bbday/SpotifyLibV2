@@ -12,6 +12,8 @@ namespace SpotifyLibV2.Connect.Interfaces
         void Attach();
         void Detach();
         Task<bool> Connect();
+        void AddPlaylistListener([NotNull] IPlaylistListener listener,
+            [NotNull] string uri);
         void AddMessageListener([NotNull] IMessageListener listener, [NotNull] params string[] uris);
         void RemoveMessageListener([NotNull] IMessageListener listener);
         void AddRequestListener([NotNull] IRequestListener listener, [NotNull] string uri);

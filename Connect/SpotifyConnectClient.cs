@@ -7,6 +7,7 @@ using SpotifyLibV2.Models.Public;
 using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using SpotifyLibV2.Listeners;
 using SpotifyLibV2.Models.Request;
 
 namespace SpotifyLibV2.Connect
@@ -52,7 +53,7 @@ namespace SpotifyLibV2.Connect
                 return new PlayingChangedRequest(
                     (RepeatState)Enum.Parse(typeof(RepeatState), playback.RepeatState, true),
                     playback.ShuffleState,
-                    playback.Item.Uri,
+                    playback.Item?.Uri,
                     playback.Context?.Uri,
                     !playback.IsPlaying,
                     playback.IsPlaying, playback.Timestamp);
@@ -81,5 +82,8 @@ namespace SpotifyLibV2.Connect
 
             return true;
         }
+
+        internal void AttachListener(string uri, IPlaylistListener listener) =>
+            _dealerClient.AddPlaylistListener(listener, uri);
     }
 }
