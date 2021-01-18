@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using JetBrains.Annotations;
 using Spotify.Playlist4.Proto;
@@ -21,10 +22,10 @@ namespace SpotifyLibV2.Models.Public
         {
 
             Playlist = playlistUri;
-            Ops = ops;
+            Ops = ops.Select(z => new HermesPlaylistOperation(z)).ToImmutableList();
         }
         public PlaylistId Playlist { get; }
-        public IReadOnlyList<Op> Ops { get; }
+        public IReadOnlyList<HermesPlaylistOperation> Ops { get; }
     }
 
     public class HermesPlaylistOperation
@@ -49,6 +50,10 @@ namespace SpotifyLibV2.Models.Public
                 Operation = PlaylistOperation.Remove;
                 items = op.Rem.Items;
                 FromIndex = op.Rem.FromIndex;
+            }
+            else
+            {
+                Operation = PlaylistOperation.Unknown;
             }
 
             Items = items?.Select(z =>
