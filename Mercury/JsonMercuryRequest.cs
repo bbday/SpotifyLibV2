@@ -1,8 +1,11 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
+using System.Text.Json;
 using JetBrains.Annotations;
-using Newtonsoft.Json;
+using JsonSerializer = Newtonsoft.Json.JsonSerializer;
 
 namespace SpotifyLibV2.Mercury
 {
@@ -18,15 +21,21 @@ namespace SpotifyLibV2.Mercury
         [NotNull]
         public T Instantiate([NotNull] MercuryResponse resp)
         {
-            var serializer = new JsonSerializer();
-            using var sr = new StreamReader(
-                new MemoryStream(Combine(resp.Payload.ToArray())));
-            using var jsonTextReader = new JsonTextReader(sr);
-            var data =  typeof(T) == typeof(string)
-                ? (T)(object)sr.ReadToEnd()
-                : serializer.Deserialize<T>(jsonTextReader);
-            resp.Dispose();
-            return data ?? throw new InvalidOperationException();
+            try
+            {
+                using var sr = new StreamReader(
+                    new MemoryStream(Combine(resp.Payload.ToArray())));
+                if (typeof(T) == typeof(string))
+                    return (T) (object) Encoding.UTF8.GetString(Combine(resp.Payload.ToArray()));
+                var data = System.Text.Json.JsonSerializer.Deserialize<T>(Combine(resp.Payload.ToArray()),
+                    new JsonSerializerOptions {IgnoreNullValues = true});
+                return data ?? throw new InvalidOperationException();
+            }
+            catch (Exception x)
+            {
+                Debug.WriteLine(x.ToString());
+                throw;
+            }
         }
 
         public static byte[] Combine(byte[][] arrays)

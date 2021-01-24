@@ -1,22 +1,23 @@
-﻿using Newtonsoft.Json;
+﻿using System.Text.Json.Serialization;
+using Newtonsoft.Json;
 
 namespace SpotifyLibV2.Models.Public
 {
     public class UserPresence
     {
-        [JsonProperty("username")]
+        [JsonPropertyName("username")]
         public string Username { get; set; }
 
-        [JsonProperty("trackUri")]
+        [JsonPropertyName("trackUri")]
         public string TrackUri { get; set; }
 
-        [JsonProperty("timestamp", NullValueHandling = NullValueHandling.Ignore)]
+        [JsonPropertyName("timestamp")]
         public long? Timestamp { get; set; }
 
-        [JsonProperty("contextUri")]
+        [JsonPropertyName("contextUri")]
         public string ContextUri { get; set; }
 
-        [JsonProperty("contextIndex", NullValueHandling = NullValueHandling.Ignore)]
+        [JsonPropertyName("contextIndex")]
         public int? ContextIndex { get; set; }
     }
 }

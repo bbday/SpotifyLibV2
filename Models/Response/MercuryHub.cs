@@ -1,11 +1,12 @@
 ﻿using System.Collections.Generic;
-using J = Newtonsoft.Json.JsonPropertyAttribute;
+using System.Text.Json.Serialization;
+using J = System.Text.Json.Serialization.JsonPropertyNameAttribute;
 
 namespace SpotifyLibV2.Models.Response
 {
     public partial class MercuryHub
     {
-        [J("root")] public Root Root { get; set; }
+        [JsonPropertyName("root")] public Root Root { get; set; }
     }
 
     public partial class Root

@@ -1,120 +1,120 @@
 ﻿using System;
 using System.Collections.Generic;
-using Newtonsoft.Json;
+using System.Text.Json.Serialization;
 using SpotifyLibV2.Models.Shared;
 
 namespace SpotifyLibV2.Models.Response
 {
     public class HomeResponse
     {
-        [JsonProperty("content")] public HomeResponseContent Content { get; set; }
+        [JsonPropertyName("content")] public HomeResponseContent Content { get; set; }
 
-        [JsonProperty("external_urls")] public object ExternalUrls { get; set; }
+        [JsonPropertyName("external_urls")] public object ExternalUrls { get; set; }
 
-        [JsonProperty("href")] public Uri Href { get; set; }
+        [JsonPropertyName("href")] public Uri Href { get; set; }
 
-        [JsonProperty("id")] public string Id { get; set; }
+        [JsonPropertyName("id")] public string Id { get; set; }
 
-        [JsonProperty("images")] public List<SpotifyImage> Images { get; set; }
+        [JsonPropertyName("images")] public IEnumerable<SpotifyImage> Images { get; set; }
 
-        [JsonProperty("name")] public string Name { get; set; }
+        [JsonPropertyName("name")] public string Name { get; set; }
 
-        [JsonProperty("rendering")] public string Rendering { get; set; }
+        [JsonPropertyName("rendering")] public string Rendering { get; set; }
 
-        [JsonProperty("tag_line")] public string TagLine { get; set; }
+        [JsonPropertyName("tag_line")] public string TagLine { get; set; }
 
-        [JsonProperty("type")] public string Type { get; set; }
+        [JsonPropertyName("type")] public string Type { get; set; }
     }
 
     public partial class HomeResponseContent
     {
-        [JsonProperty("href")] public Uri Href { get; set; }
+        [JsonPropertyName("href")] public Uri Href { get; set; }
 
-        [JsonProperty("items")] public List<PurpleItem> Items { get; set; }
+        [JsonPropertyName("items")] public IEnumerable<PurpleItem> Items { get; set; }
 
-        [JsonProperty("limit")] public long? Limit { get; set; }
+        [JsonPropertyName("limit")] public long? Limit { get; set; }
 
-        [JsonProperty("next")] public object Next { get; set; }
+        [JsonPropertyName("next")] public object Next { get; set; }
 
-        [JsonProperty("offset")] public long? Offset { get; set; }
+        [JsonPropertyName("offset")] public long? Offset { get; set; }
 
-        [JsonProperty("previous")] public object Previous { get; set; }
+        [JsonPropertyName("previous")] public object Previous { get; set; }
 
-        [JsonProperty("total")] public long? Total { get; set; }
+        [JsonPropertyName("total")] public long? Total { get; set; }
     }
 
     public partial class PurpleItem
     {
-        [JsonProperty("content")] public ItemContent Content { get; set; }
+        [JsonPropertyName("content")] public ItemContent Content { get; set; }
 
 
-        [JsonProperty("external_urls")] public object ExternalUrls { get; set; }
+        [JsonPropertyName("external_urls")] public object ExternalUrls { get; set; }
 
-        [JsonProperty("href")] public Uri Href { get; set; }
+        [JsonPropertyName("href")] public Uri Href { get; set; }
 
-        [JsonProperty("id")] public string Id { get; set; }
+        [JsonPropertyName("id")] public string Id { get; set; }
 
-        [JsonProperty("images")] public List<SpotifyImage> Images { get; set; }
+        [JsonPropertyName("images")] public List<SpotifyImage> Images { get; set; }
 
-        [JsonProperty("name")] public string Name { get; set; }
+        [JsonPropertyName("name")] public string Name { get; set; }
 
-        [JsonProperty("rendering")] public string Rendering { get; set; }
+        [JsonPropertyName("rendering")] public string Rendering { get; set; }
 
-        [JsonProperty("tag_line")] public string TagLine { get; set; }
+        [JsonPropertyName("tag_line")] public string TagLine { get; set; }
 
-        [JsonProperty("type")] public string Type { get; set; }
+        [JsonPropertyName("type")] public string Type { get; set; }
     }
 
     public partial class ItemContent
     {
-        [JsonProperty("href")] public Uri Href { get; set; }
+        [JsonPropertyName("href")] public Uri Href { get; set; }
 
-        [JsonProperty("items")] public FluffyItem[] Items { get; set; }
+        [JsonPropertyName("items")] public FluffyItem[] Items { get; set; }
 
-        [JsonProperty("limit")] public long? Limit { get; set; }
+        [JsonPropertyName("limit")] public long? Limit { get; set; }
 
-        [JsonProperty("next")] public Uri Next { get; set; }
+        [JsonPropertyName("next")] public Uri Next { get; set; }
 
-        [JsonProperty("offset")] public long? Offset { get; set; }
+        [JsonPropertyName("offset")] public long? Offset { get; set; }
 
-        [JsonProperty("previous")] public object Previous { get; set; }
+        [JsonPropertyName("previous")] public object Previous { get; set; }
 
-        [JsonProperty("total")] public long? Total { get; set; }
+        [JsonPropertyName("total")] public long? Total { get; set; }
     }
 
     public class FluffyItem : GenericSpotifyItem
     {
         private string _desc;
 
-        [JsonProperty("collaborative")] public bool? Collaborative { get; set; }
+        [JsonPropertyName("collaborative")] public bool? Collaborative { get; set; }
 
-        [JsonProperty("description")]
+        [JsonPropertyName("description")]
         public string Description
         {
             get => _desc;
             set { _desc = value; }
         }
-        [JsonProperty("album_type")]
+        [JsonPropertyName("album_type")]
         public string AlbumType { get; set; }
-        [JsonProperty("href")] public Uri Href { get; set; }
+        [JsonPropertyName("href")] public Uri Href { get; set; }
 
-        [JsonProperty("images")] public List<SpotifyImage> Images { get; set; }
+        [JsonPropertyName("images")] public List<SpotifyImage> Images { get; set; }
 
-        [JsonProperty("name")] public string Name { get; set; }
-        [JsonProperty("artists")]
+        [JsonPropertyName("name")] public string Name { get; set; }
+        [JsonPropertyName("artists")]
         public Artist[] Artists { get; set; }
 
-        [JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public string GroupName { get; set; }
-        [JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public string GroupTagLine { get; set; }
     }
 
     public class Artist : GenericSpotifyItem
     {
-        [JsonProperty("href")]
+        [JsonPropertyName("href")]
         public Uri Href { get; set; }
-        [JsonProperty("name")]
+        [JsonPropertyName("name")]
         public string Name { get; set; }
     }
 }

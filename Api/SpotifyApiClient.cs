@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Nito.AsyncEx;
 using Org.BouncyCastle.Asn1.Ocsp;
@@ -78,10 +79,28 @@ namespace SpotifyLibV2.Api
                 BaseAddress = baseUrl
             };
             c.DefaultRequestHeaders.Add("Accept", "application/json");
-            var createdService = RestService.For<T1>(c);
-            //ServiceLocator.Instance.Register(createdService);
 
-            return createdService;
+            if (type == typeof(IHomeClient))
+            {
+                var options = new JsonSerializerOptions()
+                {
+                    WriteIndented = true, IgnoreNullValues = true
+                };
+
+                var settings = new RefitSettings()
+                {
+                    ContentSerializer = new SystemTextJsonContentSerializer(options)
+                };
+                var createdService = RestService.For<T1>(c, settings);
+                return createdService;
+            }
+            else
+            {
+                var createdService = RestService.For<T1>(c);
+                //ServiceLocator.Instance.Register(createdService);
+
+                return createdService;
+            }
         }
 
         private static async Task<string> ResolveBaseUrlFromAttribute(MemberInfo type)

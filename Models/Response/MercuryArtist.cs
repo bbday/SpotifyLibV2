@@ -1,503 +1,374 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
-using System.Text;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using Newtonsoft.Json;
-using Org.BouncyCastle.Asn1.Ocsp;
-using SpotifyLibV2.Enums;
-using SpotifyLibV2.Models.Shared;
 
 namespace SpotifyLibV2.Models.Response
 {
-    public class ArtistHeaderedItem
+    public class ArtistCover
     {
-
+        /// <summary>
+        /// https CDN Url.
+        /// </summary>
+        [JsonPropertyName("uri")]
+        public string Uri { get; set; }
     }
+
+    public class GenericSpotifyTrack : GenericSpotifyItem
+    {
+        /// <summary>
+        /// Name of the track.
+        /// </summary>
+        [JsonPropertyName("name")]
+        public string Name { get; set; }
+
+        /// <summary>
+        /// If the track is explicit (contains vulgar language).
+        /// </summary>
+        [JsonPropertyName("explicit")]
+        public bool Explicit { get; set; }
+    }
+    public class PlaycountedTrack : GenericSpotifyTrack
+    {
+        /// <summary>
+        /// Number of plays. If the value is null then spotify displays "< 1000"
+        /// </summary>
+        [JsonPropertyName("playcount")]
+        public long? Playcount { get; set; }
+    }
+
+    public class ArtistGenericRelease : GenericSpotifyItem
+    {
+        /// <summary>
+        /// Name of the album
+        /// </summary>
+        [JsonPropertyName("name")]
+        public string Name { get; set; }
+
+        /// <summary>
+        /// Album Cover
+        /// </summary>
+        [JsonPropertyName("cover")]
+        public ArtistCover Cover { get; set; }
+    }
+
     public class MercuryArtist : GenericSpotifyItem
     {
-        private TopTracks _topTracks;
-        private PinnedItem _pinnedItem;
-        private Info _info;
+        [JsonPropertyName("info")]
+        public MercuryArtistShortInfo Info { get; set; }
 
-        [JsonIgnore] public string Initials { get; set; }
+        /// <summary>
+        /// Header of Artist object, <see cref="ArtistHeaderImage"/>
+        /// </summary>
+        [JsonPropertyName("header_image")]
+        public ArtistHeaderImage HeaderImage { get; set; }
 
-        [JsonProperty("info")]
-        public Info Info
-        {
-            get => _info;
-            set
-            {
-                _info = value;
-                Regex initials = new Regex(@"(\b[a-zA-Z])[a-zA-Z]* ?");
-                Initials = initials.Replace(value.Name, "$1");
-                if (PinnedItem != null)
-                {
-                    PinnedItem.ArtistInfo = value;
-                }
-            }
-        }
+        /// <summary>
+        /// A top tracks object wrapper. See: <see cref="ArtistTopTracksObject"/>
+        /// </summary>
+        [JsonPropertyName("top_tracks")]
+        public ArtistTopTracksObject TopTracks { get; set; }
 
-        [JsonProperty("header_image")]
-        public HeaderImage HeaderImage { get; set; }
+        /// <summary>
+        /// A top tracks object wrapper. See: <see cref="ArtistTopTracksObject"/>
+        /// </summary>
+        [JsonPropertyName("related_artists")]
+        public ArtistRelatedArtistsObject RelatedArtists { get; set; }
 
-        [JsonProperty("top_tracks")]
-        public TopTracks TopTracks
-        {
-            get => _topTracks;
-            set
-            {
-                value.Tracks.ForEach(k => k.ContextUri = Uri);
-                var j = value.Tracks.Select((k, i) => (k, i))
-                    .ToList();
-                j.ForEach(k => k.k.ContextIndex = k.i + 1);
-                value.Tracks = j.Select(z => z.k).ToList();
-                _topTracks = value;
-            }
-        }
+        /// <summary>
+        /// Artist's Discography
+        /// </summary>
+        [JsonPropertyName("releases")]
+        public ArtistDiscographyObject Discography { get; set; }
 
-        [JsonProperty("upcoming_concerts")]
-        public UpcomingConcerts UpcomingConcerts { get; set; }
+        /// <summary>
+        /// Artist's Merchandise
+        /// </summary>
+        [JsonPropertyName("merch")]
+        public ArtistMerchanidseObject Merchandise { get; set; }
 
-        [JsonProperty("related_artists")]
-        public RelatedArtists RelatedArtists { get; set; }
+        /// <summary>
+        /// The gallery (shown for example on the about page)
+        /// </summary>
+        [JsonPropertyName("gallery")]
+        public ArtistGalleryObject Gallery { get; set; }
 
-        [JsonProperty("biography")]
-        public Biography Biography { get; set; }
+        /// <summary>
+        /// Latest release of the artist.
+        /// </summary>
+        [JsonPropertyName("latest_release")]
+        public ArtistDiscographyRelease LatestRelease { get; set; }
 
-        [JsonProperty("releases")]
-        public Releases Releases { get; set; }
+        [JsonPropertyName("pinned_item")]
+        public PinnedItem PinnedItem { get; set; }
 
-        [JsonProperty("merch")]
-        public Merch Merch { get; set; }
-
-        [JsonProperty("gallery")]
-        public Gallery Gallery { get; set; }
-
-        [JsonProperty("latest_release")]
-        public LatestReleaseElement LatestRelease { get; set; }
-
-        [JsonProperty("published_playlists")]
-        public PublishedPlaylists PublishedPlaylists { get; set; }
-
-        [JsonProperty("monthly_listeners")]
-        public MonthlyListeners MonthlyListeners { get; set; }
-
-        [JsonProperty("creator_about")]
+        [JsonPropertyName("creator_about")]
         public CreatorAbout CreatorAbout { get; set; }
-
-        [JsonProperty("pinned_item")]
-        public PinnedItem PinnedItem
-        {
-            get => _pinnedItem;
-            set
-            {
-                if (value != null)
-                {
-                    if (Info?.Portraits != null)
-                    {
-                        value.ArtistInfo = Info;
-                    }
-
-                    _pinnedItem = value;
-                }
-            }
-        }
-
-        [JsonProperty]
-        public bool Saved { get; set; }
     }
-
-    public class Biography
-    {
-        [JsonProperty("text")]
-        public string Text { get; set; }
-    }
-
     public class CreatorAbout
     {
-        [JsonProperty("monthlyListeners")]
+        [JsonPropertyName("monthlyListeners")]
         public long? MonthlyListeners { get; set; }
 
-        [JsonProperty("globalChartPosition")]
+        [JsonPropertyName("globalChartPosition")]
         public long? GlobalChartPosition { get; set; }
     }
 
-    public class Gallery
+    public class PinnedItem
     {
-        [JsonProperty("images")]
-        public List<SpotifyCover> Images { get; set; }
+        [JsonPropertyName("type")] public string Type { get; set; }
+
+        [JsonPropertyName("uri")] public string Uri { get; set; }
+
+        [JsonPropertyName("title")] public string Title { get; set; }
+
+        [JsonPropertyName("image")] public string Image { get; set; }
+
+        [JsonPropertyName("subtitle")] public string Subtitle { get; set; }
+
+        [JsonPropertyName("secondsToExpiration")] public long? SecondsToExpiration { get; set; }
     }
 
-    public class HeaderImage
+    public class ArtistGalleryObject
     {
-        [JsonProperty("image")]
-        public string Image { get; set; }
 
-        [JsonProperty("offset")]
-        public long? Offset { get; set; }
+    }
+    public class ArtistMerchanidseObject
+    {
+        [JsonPropertyName("items")]
+        public IEnumerable<MerchItem> Items { get; set; }
     }
 
-    public class Info
+    public class MerchItem
     {
-        [JsonProperty("uri")]
-        public string Uri { get; set; }
-
-        [JsonProperty("name")]
+        /// <summary>
+        /// Name of the item
+        /// </summary>
+        [JsonPropertyName("name")]
         public string Name { get; set; }
-
-        [JsonProperty("portraits")]
-        public List<SpotifyCover> Portraits { get; set; }
-
-        [JsonProperty("verified")]
-        public bool? Verified { get; set; }
-    }
-
-    public class LatestReleaseElement : ArtistHeaderedItem
-    {
-        public static string GetAbbreviatedFromFullName(int year, int month, int day)
-        {
-            var monthName = new DateTime(year, month, day)
-                .ToString("MMM", CultureInfo.InvariantCulture);
-            return monthName.ToUpper();
-        }
-
-        [JsonProperty("uri")]
-        public string Uri { get; set; }
-
-        [JsonProperty("name")]
-        public string Name { get; set; }
-
-        [JsonProperty("cover")]
-        public SpotifyCover Cover { get; set; }
-
-        [JsonProperty("year")]
-        public int Year { get; set; }
-
-        [JsonProperty("track_count")]
-        public int TrackCount { get; set; }
-
-        [JsonProperty("month")]
-        public int Month { get; set; }
-
-        [JsonProperty("day")]
-        public int Day { get; set; }
-
-        [JsonIgnore] public string Description => $"{GetAbbreviatedFromFullName(Year, Month, Day)} {Day}, {Year}";
-    }
-
-    public class Merch
-    {
-        [JsonProperty("items")]
-        public List<Item> Items { get; set; }
-    }
-
-    public class Item
-    {
-        [JsonProperty("name")]
-        public string Name { get; set; }
-
-        [JsonProperty("description")]
+        /// <summary>
+        /// Extra metadata.
+        /// </summary>
+        [JsonPropertyName("description")]
         public string Description { get; set; }
-
-        [JsonProperty("link")]
+        /// <summary>
+        /// External link to the item.
+        /// </summary>
+        [JsonPropertyName("link")]
         public Uri Link { get; set; }
-
-        [JsonProperty("image_uri")]
-        public Uri ImageUri { get; set; }
-
-        [JsonProperty("price")]
+        /// <summary>
+        /// Https cdn url of the image.
+        /// </summary>
+        [JsonPropertyName("image_uri")]
+        public string ImageUrl { get; set; }
+        /// <summary>
+        /// Price of the item (In $USD.)
+        /// </summary>
+        [JsonPropertyName("price")]
         public string Price { get; set; }
-
-        [JsonProperty("uuid")]
-        public string Uuid { get; set; }
     }
-
-    public class MonthlyListeners
+    public class MercuryArtistShortInfo
     {
-        [JsonProperty("listener_count")]
-        public long? ListenerCount { get; set; }
-    }
-
-    public class PinnedItem : ArtistHeaderedItem
-    {
-        private string _sub;
-        private Info _info;
-
-        [JsonIgnore]
-        public Info ArtistInfo
-        {
-            get => _info;
-            set
-            {
-                _info = value;
-                PostedByString = $"Posted by {value.Name}";
-            }
-        }
-        [JsonIgnore]
-        public string PostedByString { get; set; }
-
-        [JsonProperty("type")]
-        public string Type { get; set; }
-
-        [JsonProperty("uri")]
-        public string Uri { get; set; }
-
-        [JsonProperty("title")]
-        public string Title { get; set; }
-
-        [JsonProperty("image")]
-        public string Image { get; set; }
-
-        [JsonProperty("subtitle")]
-        public string Subtitle
-        {
-            get => _sub;
-            set
-            {
-                _sub = value;
-                if (value != null)
-                {
-                    PostedByString = value;
-                }
-            }
-        }
-
-        [JsonProperty("secondsToExpiration")]
-        public long? SecondsToExpiration { get; set; }
-    }
-
-    public class PublishedPlaylists
-    {
-        [JsonProperty("playlists")]
-        public List<Playlist> Playlists { get; set; }
-    }
-
-    public class Playlist : DiscographyItem
-    {
-
-        [JsonProperty("name")]
+        /// <summary>
+        /// Name of the artist
+        /// </summary>
+        [JsonPropertyName("name")]
         public string Name { get; set; }
 
-        [JsonProperty("cover")]
-        public SpotifyCover Cover { get; set; }
+        /// <summary>
+        /// Name of the artist
+        /// </summary>
+        [JsonPropertyName("portraits")]
+        public IEnumerable<ArtistCover> Portraits { get; set; }
 
-        [JsonProperty("follower_count")]
-        public long FollowerCount { get; set; }
+        /// <summary>
+        /// Boolean whether or not the artist is verified.
+        /// </summary>
+        [JsonPropertyName("verified")]
+        public bool Verified { get; set; }
     }
-
-    public class RelatedArtists
+    public class ArtistTopTracksObject
     {
-        [JsonProperty("artists")]
-        public List<RelatedArtistsArtist> Artists { get; set; }
+        /// <summary>
+        /// Max. 10 top tracks of the artist
+        /// </summary>
+        [JsonPropertyName("tracks")]
+        public IEnumerable<ArtistTopTrack> Tracks { get; set; }
     }
-
-    public class RelatedArtistsArtist : GenericSpotifyItem
+    public class ArtistTopTrack : PlaycountedTrack
     {
+        /// <summary>
+        /// Album tied to the track. <see cref="TopTrackRelease"/>
+        /// </summary>
+        [JsonPropertyName("release")]
+        public ArtistGenericRelease Release { get; set; }
+
+    }
+    public class ArtistRelatedArtistsObject
+    {
+        /// <summary>
+        /// Max. 20 artists related to the artist.
+        /// </summary>
+        [JsonPropertyName("artists")]
+        public IEnumerable<ArtistRelated> Artists { get; set; }
+    }
+    public class ArtistRelated : GenericSpotifyItem
+    {
+        private static readonly Regex InitialsRegex = new Regex(@"(\b[a-zA-Z])[a-zA-Z]* ?");
         private string _name;
-        [JsonProperty("name")]
+        [System.Text.Json.Serialization.JsonIgnore]
+        public string Initials { get; set; }
+
+        /// <summary>
+        /// Name of the artist.
+        /// </summary>
+        [JsonPropertyName("name")]
         public string Name
         {
             get => _name;
             set
             {
                 _name = value;
-                Regex initials = new Regex(@"(\b[a-zA-Z])[a-zA-Z]* ?");
-                Initials = initials.Replace(value, "$1");
+                Initials = InitialsRegex.Replace(value, "$1");
             }
         }
-        [JsonIgnore] public string Initials { get; set; }
-        [JsonProperty("portraits")]
-        public List<SpotifyCover> Portraits { get; set; }
+
+        /// <summary>
+        /// Spotify uri: spotify:track:XXXXXXXXX
+        /// </summary>
+        [JsonPropertyName("portraits")]
+        public IEnumerable<ArtistCover> Portraits { get; set; }
+    }
+    public class ArtistHeaderImage
+    {
+        /// <summary>
+        /// https CDN Url.
+        /// </summary>
+        [JsonPropertyName("image")]
+        public string Image { get; set; }
+        /// <summary>
+        /// No clue yet what this is!
+        /// </summary>
+        [JsonPropertyName("offset")]
+        public int Offset { get; set; }
+    }
+    public class ArtistDiscographyObject
+    {
+        /// <summary>
+        /// Albums wrapper.
+        /// </summary>
+        [JsonPropertyName("albums")]
+        public DiscographyWrapper Albums { get; set; }
+        /// <summary>
+        /// Singles wrapper.
+        /// </summary>
+        [JsonPropertyName("singles")]
+        public DiscographyWrapper Singles { get; set; }
+        /// <summary>
+        /// AppearsOn wrapper.
+        /// </summary>
+        [JsonPropertyName("appears_on")]
+        public DiscographyWrapper AppearsOn { get; set; }
+        /// <summary>
+        /// Compilations wrapper.
+        /// </summary>
+        [JsonPropertyName("compilations")]
+        public DiscographyWrapper Compilations { get; set; }
+    }
+    public class DiscographyWrapper
+    {
+        [JsonPropertyName("total_count")]
+        public int TotalCount { get; set; }
+        [JsonPropertyName("releases")]
+        public IEnumerable<ArtistDiscographyRelease> Releases { get; set; }
     }
 
-    public class Releases
+    public class ArtistDiscographyRelease : ArtistGenericRelease
     {
-        [JsonProperty("albums")]
-        public Albums Albums
-        {
-            get; set;
-        }
-        [JsonProperty("singles")]
-        public Albums Singles
-        {
-            get; set;
-        }
+        /// <summary>
+        /// Year of (digital) release.
+        /// </summary>
+        [JsonPropertyName("year")]
+        public int Year { get; set; }
 
-        [JsonProperty("appears_on")]
-        public Albums AppearsOn
-        {
-            get; set;
-        }
-        [JsonProperty("compilations")]
-        public Albums Compilations
-        {
-            get; set;
-        }
+        /// <summary>
+        /// Month of (digital) release.
+        /// </summary>
+        [JsonPropertyName("month")]
+        public int Month { get; set; }
+
+        /// <summary>
+        /// Day of (digital) release.
+        [JsonPropertyName("day")]
+        public int Day { get; set; }
+
+        /// <summary>
+        /// Number of tracks inside the album.
+        /// </summary>
+        [JsonPropertyName("track_count")]
+        public int TrackCount { get; set; }
+
+        /// <summary>
+        /// Basically the tracks of the album/single. May be null!
+        /// </summary>
+        [JsonPropertyName("discs")]
+        public IEnumerable<DiscographyDisc>? Discs { get; set; }
     }
 
-    public class Albums
+    public class DiscographyDisc
     {
-        [JsonProperty("releases")]
-        public List<AlbumsRelease> Releases
-        {
-            get; set;
-        }
-
-        [JsonProperty("total_count")]
-        public long? TotalCount { get; set; }
-    }
-
-    public class DiscographyItem : GenericSpotifyItem
-    {
-        [JsonIgnore]
-        public string DerivedFrom { get; set; }
-
-        [JsonIgnore]
-        public DiscographyType DiscographyType { get; set; }
-    }
-    public class AlbumsRelease : DiscographyItem
-    {
-        private List<DiscTrack> _tracks;
-
-        [JsonProperty("name")]
-        public string Name { get; set; }
-
-        [JsonProperty("cover")]
-        public SpotifyCover Cover { get; set; }
-
-        [JsonProperty("year")]
-        public long? Year { get; set; }
-
-        [JsonProperty("track_count")]
-        public long? TrackCount { get; set; }
-
-        public delegate void InvokeDelegate(AlbumsRelease sender,
-            List<DiscTrack> obj);
-        public static InvokeDelegate InvokeMethod;
-
-        [JsonProperty("discs",
-            DefaultValueHandling = DefaultValueHandling.Include)]
-        public List<Disc> Discs { get; set; }
-
-        [JsonProperty("month")]
-        public long? Month { get; set; }
-
-        [JsonProperty("day")]
-        public long? Day { get; set; }
-
-    }
-
-    public class Disc
-    {
-        [JsonProperty("number")]
+        /// <summary>
+        /// Number of the disc. (starts at 1)
+        /// </summary>
+        [JsonPropertyName("number")]
         public int Number { get; set; }
-
-        [JsonProperty("name")]
-        public string Name { get; set; }
-
-        [JsonProperty("tracks")]
-        public List<DiscTrack> Tracks { get; set; }
+        /// <summary>
+        /// Name of the album (This is always null if you are fetching from artist)
+        /// </summary>
+        [JsonPropertyName("name")]
+        public string? Name { get; set; }
+        [JsonPropertyName("tracks")]
+        public IEnumerable<DiscographyTrack> Tracks { get; set; }
     }
 
-    public class DiscTrack : GenericSpotifyItem
+    public class DiscographyTrack : PlaycountedTrack
     {
-        private List<TrackArtist> _artists;
-        private int _numb;
-        [JsonIgnore]
-        public int DiscNumber { get; set; }
-
-
-        [JsonProperty("playcount")]
-        public int Playcount { get; set; }
-
-        [JsonProperty("name")]
-        public string Name { get; set; }
-        [JsonIgnore]
-        public string ArtistsString { get; set; }
-
-        [JsonProperty("popularity")]
+        /// <summary>
+        /// Number from 0 to 100. See the spotify api for more details.
+        /// </summary>
+        [JsonPropertyName("popularity")]
         public int Popularity { get; set; }
 
-        [JsonProperty("number")]
-        public int Number
-        {
-            get => _numb;
-            set
-            {
-                _numb = value;
-                //  base.ContextIndex = value;
-            }
-        }
+        /// <summary>
+        /// Hierarchical number of the track.
+        /// </summary>
+        [JsonPropertyName("number")]
+        public int Number { get; set; }
 
-        [JsonProperty("duration")]
-        public int Duration { get; set; }
+        /// <summary>
+        /// Duration in ms.
+        /// </summary>
+        [JsonPropertyName("duration")]
+        public long Duration { get; set; }
 
-        [JsonProperty("explicit")]
-        public bool Explicit { get; set; }
-
-        [JsonProperty("playable")]
+        /// <summary>
+        /// Boolean indicating whether or not the track is playable (region etc).
+        /// </summary>
+        [JsonPropertyName("playable")]
         public bool Playable { get; set; }
 
-        [JsonProperty("artists")]
-        public List<TrackArtist> Artists
-        {
-            get => _artists;
-            set
-            {
-                _artists = value;
-                ArtistsString = string.Join(", ", value.Select(z => z.Name));
-            }
-        }
+        /// <summary>
+        /// List of simple artist objects. See <see cref="QuickArtist"/>
+        /// </summary>
+        [JsonPropertyName("artists")]
+        public IEnumerable<QuickArtist> Artists { get; set; }
     }
-
-    public partial class TrackArtist
+    public class QuickArtist : GenericSpotifyItem
     {
-        [JsonProperty("name")]
+        /// <summary>
+        /// Name of the artist.
+        /// </summary>
+        [JsonPropertyName("name")]
         public string Name { get; set; }
-
-        [JsonProperty("uri")]
-        public string Uri { get; set; }
-    }
-
-    public class TopTracks
-    {
-        [JsonProperty("tracks")]
-        public List<TopTracksTrack> Tracks { get; set; }
-    }
-
-    public class TopTracksTrack : GenericSpotifyItem
-    {
-        [JsonProperty("playcount")]
-        public long? Playcount { get; set; }
-
-        [JsonProperty("name")]
-        public string Name { get; set; }
-
-        [JsonProperty("release")]
-        public TrackRelease Release { get; set; }
-
-        [JsonProperty("explicit")]
-        public bool? Explicit { get; set; }
-    }
-
-    public class TrackRelease
-    {
-        [JsonProperty("uri")]
-        public string Uri { get; set; }
-
-        [JsonProperty("name")]
-        public string Name { get; set; }
-
-        [JsonProperty("cover")]
-        public SpotifyCover Cover { get; set; }
-    }
-
-    public class UpcomingConcerts
-    {
-        [JsonProperty("inactive_artist")]
-        public bool? InactiveArtist { get; set; }
     }
 }

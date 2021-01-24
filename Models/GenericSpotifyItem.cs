@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using JetBrains.Annotations;
 using Newtonsoft.Json;
@@ -28,6 +29,7 @@ namespace SpotifyLibV2.Models
 
         private string _uri;
 
+        [JsonPropertyName("uri")]
         [JsonProperty("uri", NullValueHandling = NullValueHandling.Ignore)]
         public string Uri
         {
@@ -84,17 +86,22 @@ namespace SpotifyLibV2.Models
             }
         }
 
-        [JsonIgnore]
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public SpotifyType Type { get; set; }
+
+        [JsonPropertyName("id")]
         [JsonProperty("Id", NullValueHandling = NullValueHandling.Ignore)]
         public string Id
         {
             get;
             set;
         }
-        [JsonIgnore]
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public string ContextUri { get; set; }
-        [JsonIgnore]
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public int ContextIndex { get; set; }
 
         public bool InLibrary
