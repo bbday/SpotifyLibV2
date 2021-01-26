@@ -4,6 +4,7 @@ using System.Text;
 using System.Threading.Tasks;
 using SpotifyLibV2.Models.Public;
 using SpotifyLibV2.Models.Request;
+using SpotifyLibV2.Models.Request.PlaybackRequests;
 
 namespace SpotifyLibV2.Connect.Interfaces
 {
@@ -13,6 +14,6 @@ namespace SpotifyLibV2.Connect.Interfaces
 
         Task<PlayingChangedRequest?> FetchCurrentlyPlaying();
 
-        Task<bool> RequestPlay(RemoteRequest request);
+        Task<bool> RequestPlay(IPlaybackRequest request);
     }
 }

@@ -1,10 +1,12 @@
 ﻿using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace SpotifyLib.Models.Api.Paging
 {
     public class Paging<T> : IPaginatable<T>
     {
         public string? Href { get; set; } = default!;
+        [JsonPropertyName(("items"))]
         public List<T>? Items { get; set; } = default!;
         public int? Limit { get; set; } = default!;
         public string? Next { get; set; } = default!;

@@ -46,6 +46,9 @@ namespace SpotifyLibV2.Api
 
             Metadata = new AsyncLazy<IMetadata>(async () =>
                 await CreateAndRegister<IMetadata>());
+
+            Me = new AsyncLazy<IMeClient>(async () =>
+                await CreateAndRegister<IMeClient>());
         }
 
         public AsyncLazy<IHomeClient> Home { get; }
@@ -61,6 +64,7 @@ namespace SpotifyLibV2.Api
         public AsyncLazy<IPlaylist> Playlist { get; }
         public AsyncLazy<IUserService> User { get; }
         public AsyncLazy<IMetadata> Metadata { get; }
+        public AsyncLazy<IMeClient> Me { get; }
 
         /// <summary>
         /// Way to fetch token. Rn the supported scope is "playlist-read" which provides access to all endpoints.
@@ -80,7 +84,10 @@ namespace SpotifyLibV2.Api
             };
             c.DefaultRequestHeaders.Add("Accept", "application/json");
 
-            if (type == typeof(IHomeClient))
+            
+            if (type == typeof(IHomeClient) 
+                || type == typeof(IMetadata)
+                || type == typeof(IMeClient))
             {
                 var options = new JsonSerializerOptions()
                 {

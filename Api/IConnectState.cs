@@ -11,7 +11,7 @@ namespace SpotifyLibV2.Api
     public interface IConnectState
     {
         [Post("/connect-state/v1/player/command/from/{from}/to/{to}")]
-        Task<HttpResponseMessage> TransferState(string from, string to, [Body] RemoteRequest request);
+        Task<HttpResponseMessage> TransferState(string from, string to, [Body] object request);
 
 
         [Put("/connect-state/v1/devices/{deviceId}")]

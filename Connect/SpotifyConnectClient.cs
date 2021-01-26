@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using SpotifyLibV2.Listeners;
 using SpotifyLibV2.Models.Request;
+using SpotifyLibV2.Models.Request.PlaybackRequests;
 
 namespace SpotifyLibV2.Connect
 {
@@ -64,7 +65,7 @@ namespace SpotifyLibV2.Connect
             }
         }
 
-        public async Task<bool> RequestPlay(RemoteRequest request)
+        public async Task<bool> RequestPlay(IPlaybackRequest request)
         {
             if (_connectState.ActiveDeviceId == null)
             {
@@ -73,7 +74,7 @@ namespace SpotifyLibV2.Connect
             }
             var resp =
                 await (await _connectApi).TransferState(_config.DeviceId,
-                    _connectState.ActiveDeviceId, request);
+                    _connectState.ActiveDeviceId, request.GetModel());
             if (!resp.IsSuccessStatusCode)
             {
                 Debugger.Break();

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.Json.Serialization;
+using Newtonsoft.Json;
 using SpotifyLibV2.Models.Shared;
 
 namespace SpotifyLibV2.Models.Response
@@ -19,8 +21,10 @@ namespace SpotifyLibV2.Models.Response
 
         public string Href { get; set; } = default!;
 
+        [JsonPropertyName("images")]
         public List<SpotifyImage> Images { get; set; } = default!;
 
+        [JsonPropertyName("name")]
         public string Name { get; set; } = default!;
 
         public string ReleaseDate { get; set; } = default!;
