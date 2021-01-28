@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
+using Newtonsoft.Json;
 
 namespace SpotifyLibV2.Models.Response
 {
-    using J = Newtonsoft.Json.JsonPropertyAttribute;
+    using J = JsonPropertyNameAttribute;
 
     public partial class PlaylistMetadataProto
     {

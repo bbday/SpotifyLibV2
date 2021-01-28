@@ -12,16 +12,19 @@ namespace SpotifyLibV2.Models.Response
 {
     public class FullTrack : GenericSpotifyItem, IComparable<FullTrack>, IComparable, IPlayableItem
     {
+        [JsonPropertyName("is_saved")]
         public bool IsSaved { get; set; }
         [JsonPropertyName("album")]
         public SimpleAlbum Album { get; set; } = default!;
         [JsonPropertyName("artists")]
         public List<SimpleArtist> Artists { get; set; } = default!;
         public List<string> AvailableMarkets { get; set; } = default!;
+        [JsonPropertyName("disc_number")]
         public int DiscNumber { get; set; }
         [JsonProperty("duration_ms")]
         [JsonPropertyName("duration_ms")]
         public long DurationMs { get; set; }
+        [JsonPropertyName("explicit")]
         public bool Explicit { get; set; }
         public Dictionary<string, string> ExternalIds { get; set; } = default!;
         public Dictionary<string, string> ExternalUrls { get; set; } = default!;

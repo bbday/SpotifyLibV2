@@ -178,17 +178,21 @@ namespace SpotifyLibV2.Connect
                         }
                     }
 
-                    var j = new PlayingChangedRequest(
-                        _previousRepeatState ?? RepeatState.Off, 
-                        _previousShuffle ?? false,
-                        update?.Cluster?.PlayerState?.Track?.Uri,
-                        update?.Cluster.PlayerState.ContextUri,
-                        update?.Cluster?.PlayerState?.IsPaused,
-                        !update?.Cluster?.PlayerState?.IsPaused,
-                        timeStamp
-                    );
-                    _currentCluster = j;
-                    _receiver.NewItem(j);
+                    if (_currentCluster.ItemUri != update?.Cluster?.PlayerState?.Track?.Uri)
+                    {
+                        var j = new PlayingChangedRequest(
+                            _previousRepeatState ?? RepeatState.Off,
+                            _previousShuffle ?? false,
+                            update?.Cluster?.PlayerState?.Track?.Uri,
+                            update?.Cluster.PlayerState.ContextUri,
+                            update?.Cluster?.PlayerState?.IsPaused,
+                            !update?.Cluster?.PlayerState?.IsPaused,
+                            timeStamp
+                        );
+                        _currentCluster = j;
+                        _receiver.NewItem(j);
+                    }
+
                     break;
                 case { }:
                     Debug.WriteLine("Message left unhandled! uri: {0}", uri);

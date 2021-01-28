@@ -1,11 +1,13 @@
 ﻿using System.Collections.Generic;
+using System.Text.Json.Serialization;
 using Newtonsoft.Json;
 
 namespace SpotifyLibV2.Models.Response
 {
     public class Followers
     {
-
+        [JsonPropertyName("total")]
+        public int Total { get; set; }
     }
     public class PublicUser
     {
@@ -17,13 +19,13 @@ namespace SpotifyLibV2.Models.Response
         public Followers Followers { get; set; } = default!;
 
         public string Href { get; set; } = default!;
-
+        [JsonPropertyName("id")]
         public string Id { get; set; } = default!;
 
         public List<UserImage> Images { get; set; } = default!;
 
         public string Type { get; set; } = default!;
-
+        [JsonPropertyName("uri")]
         public string Uri { get; set; } = default!;
     }
 
