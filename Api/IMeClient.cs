@@ -32,5 +32,17 @@ namespace SpotifyLibV2.Api
         /// <returns></returns>
         [Get("/v1/me/top/artists")]
         Task<Paging<FullArtist>> GetTopArtists(PersonalizationTopRequest request);
+
+
+        /// <summary>
+        /// Get the current user’s followed artists.
+        /// </summary>
+        /// <param name="request">The request-model which contains required and optional parameters.</param>
+        /// <remarks>
+        /// https://developer.spotify.com/documentation/web-api/reference-beta/#endpoint-get-followed
+        /// </remarks>
+        /// <returns></returns>
+        [Get("/v1/me/following")]
+        Task<FollowedArtistsResponse> OfCurrentUser(FollowOfCurrentUserRequest request);
     }
 }

@@ -69,7 +69,7 @@ namespace SpotifyLibV2.Ids
             }
             else
             {
-                throw new ArgumentOutOfRangeException(nameof(uri), "Not a Spotify Image ID: " + uri);
+                //cdn url.
             }
             this.Uri = uri;
         }
