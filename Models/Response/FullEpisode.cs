@@ -44,7 +44,7 @@ namespace SpotifyLibV2.Models.Response
         public SimpleShow Show { get; set; } = default!;
 
         [JsonConverter(typeof(StringEnumConverter))]
-        public SpotifyType Type { get; set; }
+        public AudioType Type { get; set; }
 
         public PlaylistType DerivedFromList { get; set; }
     }

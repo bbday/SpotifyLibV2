@@ -22,7 +22,7 @@ namespace SpotifyLibV2.Ids
         public ArtistId(string uri, string locale = "en")
         {
             _locale = locale;
-            Type = SpotifyType.Artist;
+            Type = AudioType.Artist;
             this.Id = uri.Split(':').Last();
             this.Uri = uri;
         }
@@ -49,7 +49,7 @@ namespace SpotifyLibV2.Ids
         public string MercuryInsights() =>
             $"hm://creatorabout/v0/artist-insights/{Id}";
 
-        public SpotifyType Type { get; }
+        public AudioType Type { get; }
 
         protected bool Equals(ArtistId other)
         {
@@ -68,5 +68,7 @@ namespace SpotifyLibV2.Ids
                 return hashCode;
             }
         }
+
+        public AudioIdType IdType { get; }
     }
 }

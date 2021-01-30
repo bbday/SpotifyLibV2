@@ -46,7 +46,7 @@ namespace SpotifyLibV2.Ids
         {
             var hexId = hexByteString.ToByteArray().BytesToHex();
             var uri = $"spotify:image:{hexId}";
-            Type = SpotifyType.Image;
+            Type = AudioType.Image;
             var regexMatch = Regex.Match(uri, "spotify:image:(.{40})");
             if (regexMatch.Success)
             {
@@ -61,7 +61,7 @@ namespace SpotifyLibV2.Ids
 
         public ImageId(string uri)
         {
-            Type = SpotifyType.Image;
+            Type = AudioType.Image;
             var regexMatch = Regex.Match(uri, "spotify:image:(.{40})");
             if (regexMatch.Success)
             {
@@ -101,7 +101,7 @@ namespace SpotifyLibV2.Ids
 
         public string ToMercuryUri() => "hm://metadata/4/album/" + ToHexId();
 
-        public SpotifyType Type { get; }
+        public AudioType Type { get; }
 
         protected bool Equals(ImageId other)
         {
@@ -120,6 +120,8 @@ namespace SpotifyLibV2.Ids
                 return hashCode;
             }
         }
+
+        public AudioIdType IdType { get; }
     }
 }
 

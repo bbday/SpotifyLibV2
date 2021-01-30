@@ -27,6 +27,7 @@ namespace SpotifyLibV2
         private readonly DiffieHellman _keys;
         private ISpotifyConnectClient _spotifyConnectClient;
         private static MemoryCache _cache;
+
         private SpotifySession(
             LoginCredentials credentials,
             SpotifyConfiguration config,
@@ -49,6 +50,7 @@ namespace SpotifyLibV2
             SpotifyApiClient = new SpotifyApiClient(mercuryClient);
             SpotifyReceiver = new SpotifyReceiver(spotifyClient.GetStream(), mercuryClient, new CancellationToken());
         }
+
 
         public static IMemoryCache MemoryCache
         {
@@ -166,6 +168,8 @@ namespace SpotifyLibV2
         public void CountryCodeReceived(string countryCode)
         {
             CountryCode = countryCode;
+            if (Configuration != null)
+                Configuration.Country = countryCode;
         }
 
         public void Register()

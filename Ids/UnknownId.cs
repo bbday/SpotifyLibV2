@@ -10,7 +10,7 @@ namespace SpotifyLibV2.Ids
         public UnknownId(string uri)
         {
             Uri = uri;
-            Type = SpotifyType.Unknown;
+            Type = AudioType.Unknown;
         }
         public string Uri { get; }
         public string Id { get; }
@@ -24,6 +24,7 @@ namespace SpotifyLibV2.Ids
             throw new NotImplementedException();
         }
 
-        public SpotifyType Type { get; }
+        public AudioType Type { get; }
+        public AudioIdType IdType { get; }
     }
 }

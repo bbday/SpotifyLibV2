@@ -22,7 +22,7 @@ namespace SpotifyLibV2.Ids
         public AlbumId(string uri, string locale = "en")
         {
             _locale = locale;
-            Type = SpotifyType.Album;
+            Type = AudioType.Album;
             var regexMatch = Regex.Match(uri, "spotify:album:(.{22})");
             if (regexMatch.Success)
             {
@@ -33,6 +33,7 @@ namespace SpotifyLibV2.Ids
                 throw new ArgumentOutOfRangeException(nameof(uri), "Not a Spotify album ID: " + uri);
             }
             this.Uri = uri;
+            IdType = AudioIdType.Spotify;
         }
 
         public string Uri { get; }
@@ -50,7 +51,7 @@ namespace SpotifyLibV2.Ids
 
         public string ToMercuryUri() => $"hm://album/v1/album-app/album/{Uri}/desktop?country=jp&catalogue=premium&locale={_locale}";
 
-        public SpotifyType Type { get; }
+        public AudioType Type { get; }
 
         protected bool Equals(AlbumId other)
         {
@@ -69,5 +70,7 @@ namespace SpotifyLibV2.Ids
                 return hashCode;
             }
         }
+
+        public AudioIdType IdType { get; }
     }
 }

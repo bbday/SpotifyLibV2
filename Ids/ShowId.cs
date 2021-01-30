@@ -22,7 +22,7 @@ namespace SpotifyLibV2.Ids
         public ShowId(string uri, string locale = "en")
         {
             _locale = locale;
-            Type = SpotifyType.Show;
+            Type = AudioType.Show;
             var regexMatch = Regex.Match(uri, "spotify:show:(.{22})");
             if (regexMatch.Success)
             {
@@ -50,7 +50,7 @@ namespace SpotifyLibV2.Ids
 
         public string ToMercuryUri() => throw new NotImplementedException();
 
-        public SpotifyType Type { get; }
+        public AudioType Type { get; }
 
         protected bool Equals(ShowId other)
         {
@@ -69,5 +69,7 @@ namespace SpotifyLibV2.Ids
                 return hashCode;
             }
         }
+
+        public AudioIdType IdType { get; }
     }
 }

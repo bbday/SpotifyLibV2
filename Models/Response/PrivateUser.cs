@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using SpotifyLibV2.Models.Shared;
@@ -12,6 +13,7 @@ namespace SpotifyLibV2.Models.Response
         public string Country { get; set; } = default!;
 
         [JsonProperty("display_name")]
+        [JsonPropertyName("display_name")]
         public string DisplayName
         {
             get => _displayName;
@@ -22,10 +24,10 @@ namespace SpotifyLibV2.Models.Response
                 Initials = initials.Replace(value, "$1");
             }
         }
-
+        [JsonPropertyName("email")]
         public string Email { get; set; } = default!;
 
-        [JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
         public string Initials
         {
             get;
@@ -37,15 +39,15 @@ namespace SpotifyLibV2.Models.Response
         public Followers Followers { get; set; } = default!;
 
         public string Href { get; set; } = default!;
-
+        [JsonPropertyName("id")]
         public string Id { get; set; } = default!;
-
+        [JsonPropertyName("images")]
         public List<SpotifyImage> Images { get; set; } = default!;
-
+        [JsonPropertyName("product")]
         public string Product { get; set; } = default!;
 
         public string Type { get; set; } = default!;
-
+        [JsonPropertyName("uri")]
         public string Uri { get; set; } = default!;
     }
 }

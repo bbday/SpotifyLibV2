@@ -6,12 +6,12 @@ namespace SpotifyLibV2.Ids
     {
         string Title { get; }
     }
-    public interface ISpotifyId
+    public interface ISpotifyId : IAudioId
     {
         string Uri { get; }
         string Id { get; }
         string ToHexId();
         string ToMercuryUri();
-        SpotifyType Type { get; }
+        AudioType Type { get; }
     }
 }

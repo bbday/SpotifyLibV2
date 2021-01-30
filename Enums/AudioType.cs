@@ -1,6 +1,6 @@
 ﻿namespace SpotifyLibV2.Enums
 {
-    public enum SpotifyType
+    public enum AudioType
     {
         Unknown,
         Track,
@@ -13,7 +13,10 @@
         Image,
         Local,
         Link,
-        Station
+        Station,
+
+        RelatedArtist,
+        FromArtistAlbum
     }
     public enum PlaylistType
     {

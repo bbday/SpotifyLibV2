@@ -39,29 +39,29 @@ namespace SpotifyLibV2.Models
                 // SpotifySession.MusicListeners.AddOrUpdate(value, this);
                 Id = value.Split(':').LastOrDefault();
                 _uri = value;
-                if (Type != default(SpotifyType)) return;
+                if (Type != default(AudioType)) return;
                 switch (value.Split(':')[1])
                 {
                     case "track":
-                        Type = SpotifyType.Track;
+                        Type = AudioType.Track;
                         break;
                     case "artist":
-                        Type = SpotifyType.Artist;
+                        Type = AudioType.Artist;
                         break;
                     case "album":
-                        Type = SpotifyType.Album;
+                        Type = AudioType.Album;
                         break;
                     case "show":
-                        Type = SpotifyType.Show;
+                        Type = AudioType.Show;
                         break;
                     case "episode":
-                        Type = SpotifyType.Episode;
+                        Type = AudioType.Episode;
                         break;
                     case "playlist":
-                        Type = SpotifyType.Playlist;
+                        Type = AudioType.Playlist;
                         break;
                     case "collection":
-                        Type = SpotifyType.Link;
+                        Type = AudioType.Link;
                         break;
                     case "user":
 
@@ -69,17 +69,17 @@ namespace SpotifyLibV2.Models
                         var regexMatch = Regex.Match(value, "spotify:user:(.*):playlist:(.{22})");
                         if (regexMatch.Success)
                         {
-                            Type = SpotifyType.Playlist;
+                            Type = AudioType.Playlist;
                         }
                         else
                         {
                             regexMatch = Regex.Match(value, "spotify:user:(.*):collection");
                             if (regexMatch.Success)
                             {
-                                Type = SpotifyType.Link;
+                                Type = AudioType.Link;
                                 break;
                             }
-                            Type = SpotifyType.Profile;
+                            Type = AudioType.Profile;
                         }
                         break;
                 }
@@ -88,7 +88,7 @@ namespace SpotifyLibV2.Models
 
         [System.Text.Json.Serialization.JsonIgnore]
         [Newtonsoft.Json.JsonIgnore]
-        public SpotifyType Type { get; set; }
+        public AudioType Type { get; set; }
 
         [JsonPropertyName("id")]
         [JsonProperty("Id", NullValueHandling = NullValueHandling.Ignore)]

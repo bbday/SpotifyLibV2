@@ -22,7 +22,7 @@ namespace SpotifyLibV2.Ids
         public EpisodeId(string uri, string locale = "en")
         {
             _locale = locale;
-            Type = SpotifyType.Episode;
+            Type = AudioType.Episode;
             var regexMatch = uri.Split(':').Last();
             this.Id = regexMatch;
             this.Uri = uri;
@@ -43,7 +43,7 @@ namespace SpotifyLibV2.Ids
 
         public string ToMercuryUri() => $"hm://metadata/4/episode/{ToHexId()}?format=json&locale={_locale}";
 
-        public SpotifyType Type { get; }
+        public AudioType Type { get; }
 
         public override bool Equals(object obj) => obj is EpisodeId trackId && trackId?.Uri == Uri;
 
@@ -64,5 +64,7 @@ namespace SpotifyLibV2.Ids
                 return hashCode;
             }
         }
+
+        public AudioIdType IdType { get; }
     }
 }

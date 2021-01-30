@@ -21,7 +21,7 @@ namespace SpotifyLibV2.Ids
         }
         public PlaylistId(string uri, bool chart = false)
         {
-            Type = SpotifyType.Playlist;
+            Type = AudioType.Playlist;
             var regexMatch = Regex.Match(uri, "spotify:user:(.*):playlist:(.{22})");
             if (regexMatch.Success)
             {
@@ -75,7 +75,7 @@ namespace SpotifyLibV2.Ids
             return hex;
         }
 
-        public SpotifyType Type { get; }
+        public AudioType Type { get; }
         public PlaylistType PlaylistType { get; }
 
         public string ToMercuryUri() => ToMercuryUri(false);
@@ -105,5 +105,7 @@ namespace SpotifyLibV2.Ids
                 return hashCode;
             }
         }
+
+        public AudioIdType IdType { get; }
     }
 }

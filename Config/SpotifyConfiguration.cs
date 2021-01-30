@@ -52,6 +52,7 @@ namespace SpotifyLibV2.Config
         {
             get; private set;
         }
+        public string Country { get; internal set; }
         public string DeviceId { get; private set; }
     }
 }
