@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using JetBrains.Annotations;
+using SpotifyLibV2.Models;
 using JsonSerializer = Newtonsoft.Json.JsonSerializer;
 
 namespace SpotifyLibV2.Mercury
@@ -29,7 +30,7 @@ namespace SpotifyLibV2.Mercury
                 if (typeof(T) == typeof(string))
                     return (T) (object) Encoding.UTF8.GetString(combined);
                 var data = System.Text.Json.JsonSerializer.Deserialize<T>(combined, jsonSerializerOptions);
-                return data ?? throw new InvalidOperationException();
+                return data;
             }
             catch (Exception x)
             {

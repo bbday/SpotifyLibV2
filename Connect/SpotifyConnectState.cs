@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -78,6 +79,7 @@ namespace SpotifyLibV2.Connect
             await PutConnectState(_putState);
         }
 
+        private IEnumerable<string> _previousDevices;
         public Task OnMessage(string uri, Dictionary<string, string> headers, byte[] payload)
         {
             switch (uri)
@@ -102,6 +104,37 @@ namespace SpotifyLibV2.Connect
                     break;
                 case { } str when str.StartsWith("hm://connect-state/v1/cluster"):
                     var update = ClusterUpdate.Parser.ParseFrom(payload);
+
+                    if (!string.IsNullOrEmpty(update.DevicesThatChanged.FirstOrDefault()))
+                    {
+                        switch (update.UpdateReason)
+                        {
+                            case ClusterUpdateReason.DeviceStateChanged:
+                                if (ActiveDeviceId != update.Cluster.ActiveDeviceId)
+                                {
+                                    //update new device?
+                                    _receiver.DeviceChanged(update.DevicesThatChanged.First(),
+                                        SpotDeviceAction.DeviceFocusGot);
+                                    if (!string.IsNullOrEmpty(ActiveDeviceId))
+                                        _receiver.DeviceChanged(ActiveDeviceId, SpotDeviceAction.DeviceFocusLost);
+                                }
+                                else
+                                {
+                                    //do nothing?
+                                }
+
+                                break;
+                            case ClusterUpdateReason.DevicesDisappeared:
+                                _receiver.DeviceChanged(update.DevicesThatChanged.First(),
+                                    SpotDeviceAction.DevicesDisappeared);
+                                break;
+                            case ClusterUpdateReason.NewDeviceAppeared:
+                                _receiver.DeviceChanged(update.DevicesThatChanged.First(),
+                                    SpotDeviceAction.NewDeviceAppeared);
+                                break;
+                        }
+                    }
+
 
                     if (_previousPause != update.Cluster.PlayerState.IsPaused)
                     {
@@ -132,7 +165,7 @@ namespace SpotifyLibV2.Connect
                     if (updated)
                     {
                         ActiveDeviceId = update.Cluster.ActiveDeviceId;
-                        _receiver.DeviceChanged(ActiveDeviceId);
+                        //_receiver.DeviceChanged(ActiveDeviceId);
                     }
                     long timeStamp = 0;
                     if (update?.Cluster?.PlayerState?.PositionAsOfTimestamp != _previousSet)
@@ -187,10 +220,10 @@ namespace SpotifyLibV2.Connect
                             update?.Cluster.PlayerState.ContextUri,
                             update?.Cluster?.PlayerState?.IsPaused,
                             !update?.Cluster?.PlayerState?.IsPaused,
-                            timeStamp
+                            timeStamp,null
                         );
                         _currentCluster = j;
-                        _receiver.NewItem(j);
+                        Task.Run(() => _receiver.NewItem(j));
                     }
 
                     break;

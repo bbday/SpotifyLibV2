@@ -17,5 +17,8 @@ namespace SpotifyLibV2.Api
         /// <returns></returns>
         [Get("/v1/me/player")]
         Task<CurrentlyPlayingContext> GetCurrentPlayback();
+
+        [Get("/v1/me/player/devices")]
+        Task<DevicesResponse> GetDevices();
     }
 }

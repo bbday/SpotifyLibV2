@@ -9,6 +9,7 @@ using System.Text.RegularExpressions;
 using JetBrains.Annotations;
 using Newtonsoft.Json;
 using SpotifyLibV2.Enums;
+using SpotifyLibV2.Helpers;
 
 namespace SpotifyLibV2.Models
 {
@@ -27,6 +28,10 @@ namespace SpotifyLibV2.Models
             }*/
         }
 
+        public GenericSpotifyItem(AudioType? typeOverride = null)
+        {
+            Type = typeOverride ?? AudioType.Unknown;
+        }
         private string _uri;
 
         [JsonPropertyName("uri")]
@@ -40,49 +45,7 @@ namespace SpotifyLibV2.Models
                 Id = value.Split(':').LastOrDefault();
                 _uri = value;
                 if (Type != default(AudioType)) return;
-                switch (value.Split(':')[1])
-                {
-                    case "track":
-                        Type = AudioType.Track;
-                        break;
-                    case "artist":
-                        Type = AudioType.Artist;
-                        break;
-                    case "album":
-                        Type = AudioType.Album;
-                        break;
-                    case "show":
-                        Type = AudioType.Show;
-                        break;
-                    case "episode":
-                        Type = AudioType.Episode;
-                        break;
-                    case "playlist":
-                        Type = AudioType.Playlist;
-                        break;
-                    case "collection":
-                        Type = AudioType.Link;
-                        break;
-                    case "user":
-
-                        //"spotify:user:7ucghdgquf6byqusqkliltwc2:collection
-                        var regexMatch = Regex.Match(value, "spotify:user:(.*):playlist:(.{22})");
-                        if (regexMatch.Success)
-                        {
-                            Type = AudioType.Playlist;
-                        }
-                        else
-                        {
-                            regexMatch = Regex.Match(value, "spotify:user:(.*):collection");
-                            if (regexMatch.Success)
-                            {
-                                Type = AudioType.Link;
-                                break;
-                            }
-                            Type = AudioType.Profile;
-                        }
-                        break;
-                }
+                Type = value.GetAudioType();
             }
         }
 

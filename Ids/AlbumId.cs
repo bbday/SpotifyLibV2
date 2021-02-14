@@ -12,6 +12,15 @@ namespace SpotifyLibV2.Ids
     {
         private readonly string _locale;
 
+        public bool Equals(IAudioId other)
+        {
+            if (other is AlbumId albumId)
+            {
+                return albumId.Uri == Uri;
+            }
+            return false;
+        }
+        //000000001a31aba1a2c3056a05980c095e2712c6
         public static AlbumId FromHex(string hex)
         {
             var k = (Utils.HexToBytes(hex)).ToBase62(true);
@@ -55,22 +64,15 @@ namespace SpotifyLibV2.Ids
 
         protected bool Equals(AlbumId other)
         {
-            return Uri == other.Uri
-                   && Id == other.Id
-                   && Type == other.Type;
+            return Uri == other.Uri;
         }
 
         public override int GetHashCode()
         {
-            unchecked
-            {
-                var hashCode = (Uri != null ? Uri.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ (Id != null ? Id.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ (int)Type;
-                return hashCode;
-            }
+            return (Uri != null ? Uri.GetHashCode() : 0);
         }
 
         public AudioIdType IdType { get; }
+
     }
 }

@@ -51,11 +51,14 @@ namespace SpotifyLibV2.Helpers.Extensions
                 destination.Add(obj);
         }
 
-        public static void Add<T>(this ICollection<T> destination, IEnumerable<T> source)
+        public static ICollection<T> AddReturn<T>(this ICollection<T> destination, IEnumerable<T> source)
         {
-            foreach (T obj in source)
+            foreach (var obj in source)
                 destination.Add(obj);
+            return destination;
         }
+
+
         public static bool Swap<T>(this IEnumerable<T> objectArray, int x, int y)
         {
 

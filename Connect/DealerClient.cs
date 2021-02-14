@@ -34,7 +34,7 @@ namespace SpotifyLibV2.Connect
         private bool _closed = false;
         private bool _receivedPong = false;
 
-        private readonly ConcurrentDictionary<string, IPlaylistListener>
+        private readonly ConcurrentDictionary<PlaylistId, IPlaylistListener>
             _playlistListener = new();
         private readonly ConcurrentDictionary<IMessageListener, List<string>> _msgListeners = new();
         private readonly ManualResetEvent _msgListenersLock = new(false);
@@ -197,7 +197,7 @@ namespace SpotifyLibV2.Connect
                                     in _playlistListener)
                                 {
                                     if (!DecodeHermesPlaylist(payload, out var update)) continue;
-                                    if (listener.Key == update.Playlist.Uri)
+                                    if (listener.Key.Equals(new PlaylistId(update.Playlist.Uri)))
                                     {
                                         listener.Value.PlaylistUpdate(update);
                                     }
@@ -315,6 +315,21 @@ namespace SpotifyLibV2.Connect
                 //ignored
             }
         }
+
+        public void RemovePlaylistListener(IPlaylistListener listener, PlaylistId uri)
+        {
+            lock (_playlistListener)
+            {
+                if (_playlistListener.ContainsKey(uri))
+                {
+                    return;
+                }
+
+                _playlistListener.TryRemove(uri, out _);
+                //_playlistListener.Set();
+            }
+        }
+
         public void AddMessageListener([NotNull] IMessageListener listener, [NotNull] params string[] uris)
         {
             lock (_msgListeners)
@@ -327,12 +342,14 @@ namespace SpotifyLibV2.Connect
             }
         }
         public void AddPlaylistListener([NotNull] IPlaylistListener listener,
-            [NotNull] string uri)
+            [NotNull] PlaylistId uri)
         {
             lock (_playlistListener)
             {
                 if (_playlistListener.ContainsKey(uri))
-                    throw new ArgumentException($"A listener for {uri} has already been added.");
+                {
+                    return;
+                }
 
                 _playlistListener.TryAdd(uri, listener);
                 //_playlistListener.Set();

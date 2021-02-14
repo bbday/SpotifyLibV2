@@ -12,6 +12,14 @@ namespace SpotifyLibV2.Ids
     {
         private readonly string _locale;
         private static Base62Test Base62Test =  Base62Test.CreateInstanceWithInvertedCharacterSet();
+        public bool Equals(IAudioId other)
+        {
+            if (other is EpisodeId genid)
+            {
+                return genid.Uri == Uri;
+            }
+            return false;
+        }
         public static EpisodeId FromHex(string hex)
         {
             //  return new ArtistId(Utils.bytesToHex(BASE62.decode(id.getBytes(), 16)));

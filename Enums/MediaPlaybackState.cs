@@ -7,6 +7,7 @@
         Buffering,
         Playing,
         Paused,
-        Stopped
+        Stopped,
+        Ended
     }
 }

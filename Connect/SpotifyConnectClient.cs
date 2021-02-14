@@ -7,6 +7,7 @@ using SpotifyLibV2.Models.Public;
 using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using SpotifyLibV2.Ids;
 using SpotifyLibV2.Listeners;
 using SpotifyLibV2.Models.Request;
 using SpotifyLibV2.Models.Request.PlaybackRequests;
@@ -57,7 +58,9 @@ namespace SpotifyLibV2.Connect
                     playback.Item?.Uri,
                     playback.Context?.Uri,
                     !playback.IsPlaying,
-                    playback.IsPlaying, playback.Timestamp);
+                    playback.IsPlaying, 
+                    playback.ProgressMs,
+                    playback.Device);
             }
             else
             {
@@ -74,7 +77,9 @@ namespace SpotifyLibV2.Connect
             }
             var resp =
                 await (await _connectApi).TransferState(_config.DeviceId,
-                    _connectState.ActiveDeviceId, request.GetModel());
+                    _connectState.ActiveDeviceId, 
+                    "player",
+                    "command", request.GetModel());
             if (!resp.IsSuccessStatusCode)
             {
                 Debugger.Break();
@@ -84,7 +89,29 @@ namespace SpotifyLibV2.Connect
             return true;
         }
 
-        internal void AttachListener(string uri, IPlaylistListener listener) =>
+        public async Task<bool> TransferDevice(string deviceId)
+        {
+            var transferRequest = new TransferRequst();
+            if (_connectState.ActiveDeviceId == null)
+            {
+                var t = await(await _playerApi).GetCurrentPlayback();
+                _connectState.ActiveDeviceId = t.Device?.Id;
+            }
+            var resp =
+                await(await _connectApi).TransferState(_config.DeviceId,
+                    deviceId,
+                    "connect",
+                    "transfer", transferRequest.GetModel());
+            if (!resp.IsSuccessStatusCode)
+            {
+                Debugger.Break();
+                return false;
+            }
+
+            return true;
+        }
+
+        internal void AttachListener(PlaylistId uri, IPlaylistListener listener) =>
             _dealerClient.AddPlaylistListener(listener, uri);
     }
 }

@@ -87,7 +87,8 @@ namespace SpotifyLibV2.Api
             
             if (type == typeof(IHomeClient) 
                 || type == typeof(IMetadata)
-                || type == typeof(IMeClient))
+                || type == typeof(IMeClient)
+                || type == typeof(IConnectState))
             {
                 var options = new JsonSerializerOptions()
                 {

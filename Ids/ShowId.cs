@@ -11,7 +11,14 @@ namespace SpotifyLibV2.Ids
     public class ShowId : ISpotifyId
     {
         private readonly string _locale;
-
+        public bool Equals(IAudioId other)
+        {
+            if (other is ShowId albumId)
+            {
+                return albumId.Uri == Uri;
+            }
+            return false;
+        }
         public static ShowId FromHex(string hex)
         {
             var k = (Utils.HexToBytes(hex)).ToBase62(true);

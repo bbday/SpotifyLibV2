@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using Base62;
@@ -10,6 +11,14 @@ namespace SpotifyLibV2.Ids
 {
     public class PlaylistId : ISpotifyId
     {
+        public bool Equals(IAudioId other)
+        {
+            if (other is PlaylistId genid)
+            {
+                return genid.Id == Id;
+            }
+            return false;
+        }
         private static Base62Test Base62Test =
             Base62Test.CreateInstanceWithInvertedCharacterSet();
         public static PlaylistId FromHex(string hex)
@@ -19,6 +28,7 @@ namespace SpotifyLibV2.Ids
             var j = "spotify:playlist:" + Encoding.Default.GetString(Utils.HexToBytes(hex));
             return new PlaylistId(j);
         }
+
         public PlaylistId(string uri, bool chart = false)
         {
             Type = AudioType.Playlist;
@@ -31,29 +41,61 @@ namespace SpotifyLibV2.Ids
             }
             else
             {
-                regexMatch = Regex.Match(uri, "spotify:playlist:(.{22})");
+                regexMatch = Regex.Match(uri, "spotify:station:user:(.*):playlist:(.{22})");
                 if (regexMatch.Success)
                 {
-                    this.Id = regexMatch.Groups[1].Value;
-                    this.Username = null;
-                    PlaylistType = PlaylistType.UserPlaylist;
+                    this.Id = regexMatch.Groups[2].Value;
+                    this.Username = regexMatch.Groups[1].Value;
+                    PlaylistType = PlaylistType.Radio;
                 }
                 else
                 {
-                    regexMatch = Regex.Match(uri, "spotify:dailymix:(.{22})");
+                    regexMatch = Regex.Match(uri, "spotify:playlist:(.*):playlist:(.{22})");
                     if (regexMatch.Success)
                     {
-                        this.Id = regexMatch.Groups[1].Value;
-                        PlaylistType = PlaylistType.DailyMixList;
+                        this.Id = regexMatch.Groups[2].Value;
+                        this.Username = regexMatch.Groups[1].Value;
+                        PlaylistType = PlaylistType.UserPlaylist;
                     }
                     else
                     {
-                        throw new ArgumentOutOfRangeException(nameof(uri), "Not a Spotify album ID: " + uri);
+                        regexMatch = Regex.Match(uri, "spotify:playlist:(.{22})");
+                        if (regexMatch.Success)
+                        {
+                            this.Id = regexMatch.Groups[1].Value;
+                            this.Username = null;
+                            PlaylistType = PlaylistType.UserPlaylist;
+                        }
+                        else
+                        {
+                            regexMatch = Regex.Match(uri, "spotify:dailymix:(.{22})");
+                            if (regexMatch.Success)
+                            {
+                                this.Id = regexMatch.Groups[1].Value;
+                                PlaylistType = PlaylistType.MadeForUser;
+                            }
+                            else
+                            {
+                                regexMatch = Regex.Match(uri, "spotify:station:user:(.*):playlist:(.{22})");
+                                if (regexMatch.Success)
+                                {
+                                    this.Id = regexMatch.Groups[2].Value;
+                                    this.Username = regexMatch.Groups[1].Value;
+                                    PlaylistType = PlaylistType.Radio;
+                                }
+                                else
+                                {
+                                    throw new ArgumentOutOfRangeException(nameof(uri),
+                                        "Not a Spotify album ID: " + uri);
+                                }
+                            }
+                        }
                     }
                 }
             }
+
             if (chart)
-                PlaylistType = PlaylistType.DailyMixList;
+                PlaylistType = PlaylistType.MadeForUser;
 
             this.Uri = uri;
         }
@@ -76,7 +118,7 @@ namespace SpotifyLibV2.Ids
         }
 
         public AudioType Type { get; }
-        public PlaylistType PlaylistType { get; }
+        public PlaylistType PlaylistType { get; set; }
 
         public string ToMercuryUri() => ToMercuryUri(false);
 

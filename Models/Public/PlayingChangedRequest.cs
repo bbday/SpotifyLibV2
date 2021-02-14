@@ -1,4 +1,6 @@
-﻿using SpotifyLibV2.Enums;
+﻿using JetBrains.Annotations;
+using SpotifyLibV2.Enums;
+using SpotifyLibV2.Models.Response;
 
 namespace SpotifyLibV2.Models.Public
 {
@@ -11,7 +13,7 @@ namespace SpotifyLibV2.Models.Public
             string contextUri, 
             bool? isPaused,
             bool? isPlaying,
-            long? timeStamp)
+            long? timeStamp, [CanBeNull] Device activeDevice)
         {
             RepeatState = repeatState;
             IsShuffle = isShuffle;
@@ -20,6 +22,7 @@ namespace SpotifyLibV2.Models.Public
             IsPaused = isPaused;
             IsPlaying = isPlaying;
             TimeStamp = timeStamp;
+            ActiveDevice = activeDevice;
         }
 
         public RepeatState RepeatState { get; }
@@ -29,6 +32,8 @@ namespace SpotifyLibV2.Models.Public
         public bool? IsPaused { get;  }
         public bool? IsPlaying { get;  }
         public long? TimeStamp { get; }
+
+        [CanBeNull] public Device ActiveDevice { get; }
     }
 }
 

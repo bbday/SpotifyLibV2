@@ -108,33 +108,32 @@ namespace SpotifyLibV2
             var (accumulator, aPresponseBytes) = WriteAccumulator(clientHelloBytes);
 
             using var data = ReadApResponseMessage(accumulator, aPresponseBytes, keys);
-
-            try
+            if (this.DataAvailable)
             {
-                var scrap = new byte[4];
-                ReadTimeout = 300;
-                var read = Read(scrap, 0, scrap.Length);
-                if (read == scrap.Length)
+                try
                 {
-                    var length = (scrap[0] << 24) | (scrap[1] << 16) | (scrap[2] << 8) | (scrap[3] & 0xFF);
-                    var payload = new byte[length - 4];
-                    this.ReadComplete(payload, 0, payload.Length);
-                    var failed = APResponseMessage.Parser.ParseFrom(payload)?.LoginFailed;
-                    throw new SpotifyAuthenticatedException(failed);
+                    var scrap = new byte[4];
+                    ReadTimeout = 300;
+                    var read = Read(scrap, 0, scrap.Length);
+                    if (read == scrap.Length)
+                    {
+                        var length = (scrap[0] << 24) | (scrap[1] << 16) | (scrap[2] << 8) | (scrap[3] & 0xFF);
+                        var payload = new byte[length - 4];
+                        this.ReadComplete(payload, 0, payload.Length);
+                        var failed = APResponseMessage.Parser.ParseFrom(payload)?.LoginFailed;
+                        throw new SpotifyAuthenticatedException(failed);
+                    }
+                    else if (read > 0)
+                    {
+                        throw new Exception("Read unknown data!");
+                    }
                 }
-                else if (read > 0)
+                catch (Exception x)
                 {
-                    throw new Exception("Read unknown data!");
+                    // ignored
                 }
             }
-            catch (Exception x)
-            {
-                // ignored
-            }
-            finally
-            {
-                ReadTimeout = Timeout.Infinite;
-            }
+            ReadTimeout = Timeout.Infinite;
 
             using (_authLock.Lock())
             {

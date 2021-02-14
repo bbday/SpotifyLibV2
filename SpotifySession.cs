@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Google.Protobuf;
@@ -9,12 +10,14 @@ using Spotify;
 using Spotify.Social;
 using SpotifyLibV2.Abstractions;
 using SpotifyLibV2.Api;
+using SpotifyLibV2.Attributes;
 using SpotifyLibV2.Authentication;
 using SpotifyLibV2.Config;
 using SpotifyLibV2.Connect;
 using SpotifyLibV2.Connect.Interfaces;
 using SpotifyLibV2.Crypto;
 using SpotifyLibV2.Exceptions;
+using SpotifyLibV2.Ids;
 using SpotifyLibV2.Interfaces;
 using SpotifyLibV2.Listeners;
 using SpotifyLibV2.Mercury;
@@ -66,6 +69,7 @@ namespace SpotifyLibV2
         }
 
         public static ICache Cache { get; private set; }
+        public HttpClient MetadataClient { get; internal set; }
         public APWelcome ApWelcome { get; set; }
         public APLoginFailed ApLoginFailed { get; set; }
         public SpotifyConfiguration Configuration { get; }
@@ -118,7 +122,7 @@ namespace SpotifyLibV2
             }
         }
 
-        public void AttachPlaylistListener(string uri, IPlaylistListener listener)
+        public void AttachPlaylistListener(PlaylistId uri, IPlaylistListener listener)
         {
             if (SpotifyConnectClient is SpotifyConnectClient conClient)
             {
@@ -152,6 +156,7 @@ namespace SpotifyLibV2
                     SpotifyApiClient.PlayerClient,
                     Configuration);
             SpotifyConnectClient = connectClient;
+            connectInterface.Instantiated(connectClient);
             return connectClient;
         }
 
@@ -194,7 +199,16 @@ namespace SpotifyLibV2
 
             var loginCredentialsTask = authenticator.Get();
             await Task.WhenAll(tcpClientTask, loginCredentialsTask);
-            return new SpotifySession(await loginCredentialsTask, config, await tcpClientTask);
+            var ses =
+                new SpotifySession(await loginCredentialsTask, config, await tcpClientTask);
+            ses.MetadataClient = new HttpClient(new AuthenticatedHttpClientHandler(() =>
+                ses.SpotifyApiClient.Tokens.GetToken("playlist-read").AccessToken))
+            {
+                BaseAddress = new
+                    Uri(await ApResolver.GetClosestSpClient())
+            };
+            ses.MetadataClient.DefaultRequestHeaders.Add("Accept", "application/x-protobuf");
+            return ses;
         }
 
         private ClientHello NewClientHello()

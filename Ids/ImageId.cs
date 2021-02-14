@@ -15,6 +15,10 @@ namespace SpotifyLibV2.Ids
 {
     public class ImageId : ISpotifyId
     {
+        public bool Equals(IAudioId other)
+        {
+            return false;
+        }
         public static void PutAsMetadata([NotNull] ProvidedTrack builder,
             [NotNull] ImageGroup group)
         {

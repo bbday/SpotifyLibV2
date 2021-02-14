@@ -15,5 +15,6 @@ namespace SpotifyLibV2.Connect.Interfaces
         Task<PlayingChangedRequest?> FetchCurrentlyPlaying();
 
         Task<bool> RequestPlay(IPlaybackRequest request);
+        Task<bool> TransferDevice(string deviceId);
     }
 }

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using JetBrains.Annotations;
@@ -30,30 +31,36 @@ namespace SpotifyLibV2.Models.Public
 
     public class HermesPlaylistOperation
     {
-        internal HermesPlaylistOperation(Op op)
+        public HermesPlaylistOperation(Op op)
         {
             IEnumerable<Item> items = null;
-            if (op.Add != null)
+            switch (op.Kind)
             {
-                Operation = PlaylistOperation.Add;
-                items = op.Add.Items;
-                FromIndex = op.Add.FromIndex;
-            }
-            else if (op.Mov != null)
-            {
-                Operation = PlaylistOperation.Move;
-                FromIndex = op.Mov.FromIndex;
-                ToIndex = op.Mov.ToIndex;
-            }
-            else if (op.Rem != null)
-            {
-                Operation = PlaylistOperation.Remove;
-                items = op.Rem.Items;
-                FromIndex = op.Rem.FromIndex;
-            }
-            else
-            {
-                Operation = PlaylistOperation.Unknown;
+                case Op.Types.Kind.Unknown:
+                    Operation = PlaylistOperation.Unknown;
+                    break;
+                case Op.Types.Kind.Add:
+                    Operation = PlaylistOperation.Add;
+                    items = op.Add.Items;
+                    FromIndex = op.Add.FromIndex;
+                    break;
+                case Op.Types.Kind.Rem:
+                    Operation = PlaylistOperation.Remove;
+                    items = op.Rem.Items;
+                    FromIndex = op.Rem.FromIndex;
+                    break;
+                case Op.Types.Kind.Mov:
+                    Operation = PlaylistOperation.Move;
+                    FromIndex = op.Mov.FromIndex;
+                    ToIndex = op.Mov.ToIndex;
+                    break;
+                case Op.Types.Kind.UpdateItemAttributes:
+                    break;
+                case Op.Types.Kind.UpdateListAttributes:
+                    //TODO!
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
             }
 
             Items = items?.Select(z =>
@@ -62,16 +69,16 @@ namespace SpotifyLibV2.Models.Public
                 var type = uri.Split(':')[1];
                 return type switch
                 {
-                    "track" => new TrackId(uri) as ISpotifyId,
-                    "episode" => new EpisodeId(uri) as ISpotifyId,
-                    _ => new UnknownId(uri) as ISpotifyId
+                    "track" => (new TrackId(uri) as ISpotifyId, z.Attributes),
+                    "episode" => (new EpisodeId(uri) as ISpotifyId, z.Attributes),
+                    _ => (new UnknownId(uri) as ISpotifyId, z.Attributes)
                 };
             });
         }
 
         [CanBeNull] public int? ToIndex { get; }
         public int FromIndex { get; }
-        [CanBeNull] public IEnumerable<ISpotifyId> Items { get; }
+        [CanBeNull] public IEnumerable<(ISpotifyId Id, ItemAttributes attributes)> Items { get; }
         public PlaylistOperation Operation { get; }
     }
 }

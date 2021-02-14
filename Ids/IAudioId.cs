@@ -1,6 +1,8 @@
-﻿namespace SpotifyLibV2.Ids
+﻿using System;
+
+namespace SpotifyLibV2.Ids
 {
-    public interface IAudioId
+    public interface IAudioId : IEquatable<IAudioId>
     {
         AudioIdType IdType { get; }
     }

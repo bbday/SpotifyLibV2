@@ -23,6 +23,7 @@ namespace SpotifyLibV2.Models.Response
         public PublicUser? Owner { get; set; } = default!;
         [JsonProperty("public")]
         public bool? Public { get; set; }
+        [JsonProperty("snapshot_id")]
         [JsonPropertyName("snapshot_id")]
         public string? SnapshotId { get; set; } = default!;
     }

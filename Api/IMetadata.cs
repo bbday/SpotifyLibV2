@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Net.Http;
+using System.Threading.Tasks;
 using Refit;
 using SpotifyLibV2.Attributes;
 using SpotifyLibV2.Models.Request;
@@ -23,5 +24,13 @@ namespace SpotifyLibV2.Api
         [Get(
             "/user-profile-view/v3/profile/{userId}/following")]
         Task<ProfilesResponse> GetFollowing(string userId, [AliasAs("from_market")] string market);
+
+        [Get("/playlist/v2/playlist/{playlistId}/diff?revision={revision}&handlesContent=")]
+       // [Header("Accept: application/x-protobuf")]
+        Task<HttpResponseMessage> GetDiff(string playlistId, string revision);
+
+       [Get("/playlist/v2/user/{userId}/rootlist?decorate={decoration}")]
+       // [Header("Accept: application/x-protobuf")]
+       Task<HttpResponseMessage> GetUserLists(string userId, string decoration);
     }
 }

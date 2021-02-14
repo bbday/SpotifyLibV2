@@ -4,11 +4,23 @@ using System.Linq;
 using System.Text;
 using Base62;
 using SpotifyLibV2.Enums;
+using SpotifyLibV2.Helpers;
 
 namespace SpotifyLibV2.Ids
 {
     public class TrackId : IPlayableId
     {
+        private static readonly Base62Test Base62Test 
+            = Base62Test.CreateInstanceWithInvertedCharacterSet();
+
+        public bool Equals(IAudioId other)
+        {
+            if (other is TrackId genid)
+            {
+                return genid.Uri == Uri;
+            }
+            return false;
+        }
         private readonly string _locale;
         public TrackId(string uri, string locale = "en")
         {
@@ -17,8 +29,15 @@ namespace SpotifyLibV2.Ids
             var regexMatch = uri.Split(':').Last();
             this.Id = regexMatch;
             this.Uri = uri;
+            IdType = AudioIdType.Spotify;
         }
-
+        public static TrackId FromHex(string hex)
+        {
+            //  return new ArtistId(Utils.bytesToHex(BASE62.decode(id.getBytes(), 16)));
+            var k = Base62Test.Encode(Utils.HexToBytes(hex));
+            var j = "spotify:track:" + Encoding.Default.GetString(k);
+            return new TrackId(j);
+        }
         public string Uri { get; }
         public string Id { get; }
         public string ToHexId()
@@ -36,9 +55,9 @@ namespace SpotifyLibV2.Ids
 
         public AudioType Type { get; }
 
-        public override bool Equals(object obj) => obj is TrackId trackId && trackId?.Uri == Uri;
+        public override bool Equals(object obj) => obj is TrackId trackId && trackId.Uri == Uri;
 
-        protected bool Equals(TrackId other)
+        public bool Equals(TrackId other)
         {
             return Uri == other.Uri
                    && Id == other.Id
@@ -57,6 +76,11 @@ namespace SpotifyLibV2.Ids
         }
 
         public AudioIdType IdType { get; }
+
+        public override string ToString()
+        {
+            return Uri;
+        }
     }
 }
 

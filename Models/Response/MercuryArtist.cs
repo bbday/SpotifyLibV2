@@ -1,7 +1,9 @@
-﻿using System;
+﻿
+using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+using JetBrains.Annotations;
 
 namespace SpotifyLibV2.Models.Response
 {
@@ -104,7 +106,23 @@ namespace SpotifyLibV2.Models.Response
 
         [JsonPropertyName("creator_about")]
         public CreatorAbout CreatorAbout { get; set; }
+
+        [JsonPropertyName("published_playlists")]
+        public ArtistsPlaylistsWrapper Playlists { get; set; }
     }
+
+    public class ArtistsPlaylistsWrapper
+    {
+        [JsonPropertyName("playlists")]
+        public IEnumerable<ArtistPlaylist> Playlists { get; set; }
+    }
+
+    public class ArtistPlaylist : ArtistGenericRelease
+    {
+        [JsonPropertyName(("follower_count"))]
+        public int FollowerCount { get; set; }
+    }
+
     public class CreatorAbout
     {
         [JsonPropertyName("monthlyListeners")]
@@ -127,6 +145,12 @@ namespace SpotifyLibV2.Models.Response
         [JsonPropertyName("subtitle")] public string Subtitle { get; set; }
 
         [JsonPropertyName("secondsToExpiration")] public long? SecondsToExpiration { get; set; }
+
+        [JsonPropertyName("comment")] 
+        [CanBeNull] public string Comment { get; set; }
+        [JsonPropertyName("backgroundImage")]
+        [CanBeNull]
+        public string BackgroundImage { get; set; }
     }
 
     public class ArtistGalleryObject
@@ -155,7 +179,7 @@ namespace SpotifyLibV2.Models.Response
         /// External link to the item.
         /// </summary>
         [JsonPropertyName("link")]
-        public Uri Link { get; set; }
+        public string Link { get; set; }
         /// <summary>
         /// Https cdn url of the image.
         /// </summary>
@@ -362,6 +386,8 @@ namespace SpotifyLibV2.Models.Response
         /// </summary>
         [JsonPropertyName("artists")]
         public IEnumerable<QuickArtist> Artists { get; set; }
+
+        public int DiscNumber { get; set; }
     }
     public class QuickArtist : GenericSpotifyItem
     {

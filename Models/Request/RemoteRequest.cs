@@ -1,11 +1,13 @@
-﻿using J = Newtonsoft.Json.JsonPropertyAttribute;
+﻿using System.Text.Json.Serialization;
+using J = System.Text.Json.Serialization.JsonPropertyNameAttribute;
 
 
 namespace SpotifyLibV2.Models.Request
 {
     public partial class RemoteRequest
     {
-        [J("command")] public Command Command { get; set; }
+        [J("command")] 
+        public Command Command { get; set; }
     }
 
     public partial class Command
@@ -29,25 +31,33 @@ namespace SpotifyLibV2.Models.Request
 
     public partial class Options
     {
-        [J("license")] public string License { get; set; }
-        [J("skip_to")] public SkipTo SkipTo { get; set; }
-        [J("player_options_override")] public PlayerOptionsOverride PlayerOptionsOverride { get; set; }
+        [JsonPropertyName("license")]
+        public string License { get; set; }
+        [JsonPropertyName("skip_to")]
+        public SkipTo SkipTo { get; set; }
+        [JsonPropertyName("player_options_override")]
+        public PlayerOptionsOverride PlayerOptionsOverride { get; set; }
     }
 
     public partial class PlayerOptionsOverride
     {
-        [J("repeating_track")] public bool RepeatingTrack { get; set; }
-        [J("repeating_context")] public bool RepeatingContext { get; set; }
+        [JsonPropertyName("repeating_track")]
+        public bool RepeatingTrack { get; set; }
+        [JsonPropertyName("repeating_context")]
+        public bool RepeatingContext { get; set; }
     }
 
     public partial class SkipTo
     {
-        [J("track_index")] public long TrackIndex { get; set; }
+        [JsonPropertyName("track_index")] 
+        public int TrackIndex { get; set; }
     }
 
-    public partial class PlayOrigin
+    public class PlayOrigin
     {
-        [J("feature_identifier")] public string FeatureIdentifier { get; set; }
-        [J("feature_version")] public string FeatureVersion { get; set; }
+        [JsonPropertyName("feature_identifier")]
+        public string FeatureIdentifier { get; set; }
+        [JsonPropertyName("feature_version")]
+        public string FeatureVersion { get; set; }
     }
 }

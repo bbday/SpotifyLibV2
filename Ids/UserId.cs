@@ -1,21 +1,32 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
+using Spotify.Social;
 using SpotifyLibV2.Enums;
 
 namespace SpotifyLibV2.Ids
 {
-    public class UnknownId : ISpotifyId
+    public class UserId : ISpotifyId
     {
         public bool Equals(IAudioId other)
         {
+            if (other is UserId genid)
+            {
+                return genid.Uri == Uri;
+            }
             return false;
         }
-        public UnknownId(string uri)
+        public UserId(string uri)
         {
-            Uri = uri;
-            Type = AudioType.Unknown;
+            Type = AudioType.Profile;
+            IdType = AudioIdType.Spotify;
+            var regexMatch = uri.Split(':').Last();
+            this.Id = regexMatch;
+            this.Uri = uri;
         }
+
+        public AudioIdType IdType { get; }
         public string Uri { get; }
         public string Id { get; }
         public string ToHexId()
@@ -29,6 +40,5 @@ namespace SpotifyLibV2.Ids
         }
 
         public AudioType Type { get; }
-        public AudioIdType IdType { get; }
     }
 }

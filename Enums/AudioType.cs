@@ -1,4 +1,6 @@
-﻿namespace SpotifyLibV2.Enums
+﻿using SpotifyLibV2.Attributes;
+
+namespace SpotifyLibV2.Enums
 {
     public enum AudioType
     {
@@ -14,14 +16,15 @@
         Local,
         Link,
         Station,
-
+        TopRecommendation,
         RelatedArtist,
-        FromArtistAlbum
     }
+
     public enum PlaylistType
     {
-        UserPlaylist,
-        ChartedList,
-        DailyMixList
+        [String("PLAYLIST")] UserPlaylist,
+        [String("CHART")] ChartedList,
+        [String("A PLAYLIST MADE FOR {0}")] MadeForUser,
+        [String("RADIO")] Radio
     }
 }

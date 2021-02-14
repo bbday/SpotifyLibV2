@@ -227,8 +227,11 @@ namespace SpotifyLibV2.Mercury
         public T SendSync<T>(JsonMercuryRequest<T> request) where T : class
         {
             var resp = SendSync(request.Request);
-            if (resp.StatusCode >= 200 && resp.StatusCode < 300) return request.Instantiate(resp);
-            else throw new MercuryException(resp);
+            if (resp.StatusCode >= 200 && resp.StatusCode < 300)
+            {
+                return request.Instantiate(resp);
+            }
+            throw new MercuryException(resp);
         }
 
         public T SendSync<T>(ProtobuffedMercuryRequest<T> request) where T : IMessage<T>
