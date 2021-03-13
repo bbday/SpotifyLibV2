@@ -11,7 +11,10 @@ namespace SpotifyLibV2.Helpers
         public static AudioType GetAudioType(this string input)
         {
             var type = AudioType.Unknown;
-            if (input == null) return AudioType.Unknown;
+            if (input == null)
+            {
+                return AudioType.Link;
+            }
             switch (input.Split(':')[1])
             {
                 case "station":

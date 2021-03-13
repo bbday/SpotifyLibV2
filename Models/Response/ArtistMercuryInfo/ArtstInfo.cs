@@ -4,14 +4,15 @@ using System.Text.Json.Serialization;
 
 namespace SpotifyLibV2.Models.Response.ArtistMercuryInfo
 {
-    using J = Newtonsoft.Json.JsonPropertyAttribute;
+    using J = JsonPropertyNameAttribute;
 
     public class ArtstInfo
     {
-        [J("artistGid")] public string ArtistGid { get; set; }
+        [J("artistGid")] 
+        public string ArtistGid { get; set; }
         [J("userCanEdit")] public bool UserCanEdit { get; set; }
         [J("name")] public string Name { get; set; }
-        [J("mainImageUrl")] public Uri MainImageUrl { get; set; }
+        [J("mainImageUrl")] public string MainImageUrl { get; set; }
         [J("headerImage")] public Image HeaderImage { get; set; }
         [J("autobiography")] public Autobiography Autobiography { get; set; }
         [J("biography")] public string Biography { get; set; }
@@ -24,6 +25,9 @@ namespace SpotifyLibV2.Models.Response.ArtistMercuryInfo
         [J("followingCount")] public long FollowingCount { get; set; }
         [J("playlists")] public Playlists Playlists { get; set; }
         [J("cities")] public List<City> Cities { get; set; }
+
+        [JsonIgnore]
+        public DateTime SavedAt { get; set; }
     }
     public class City
     {
@@ -41,7 +45,7 @@ namespace SpotifyLibV2.Models.Response.ArtistMercuryInfo
     {
         [J("id")] public string Id { get; set; }
         [J("moderationUri")] public string ModerationUri { get; set; }
-        [J("uri")] public Uri Uri { get; set; }
+        [J("uri")] public string Uri { get; set; }
         [J("width")] public long Width { get; set; }
         [J("height")] public long Height { get; set; }
     }

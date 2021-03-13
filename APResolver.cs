@@ -5,7 +5,7 @@ namespace SpotifyLibV2
 {
     public static class ApResolver
     {
-        private static readonly HttpClient HttpClient = new HttpClient();
+        private static readonly HttpClient HttpClient = new();
         private static string _resolvedDealer;
         private static string _resolvedSpClient;
         private static (string host, int port) _resolvedAccessPoint;

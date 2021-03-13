@@ -74,5 +74,9 @@ namespace SpotifyLibV2.Ids
 
         public AudioIdType IdType { get; }
 
+        public override string ToString()
+        {
+            return Uri;
+        }
     }
 }

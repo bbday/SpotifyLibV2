@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net.Http;
@@ -36,9 +37,13 @@ namespace SpotifyLibV2
             SpotifyConfiguration config,
             SpotifyClient spotifyClient)
         {
+            UserAttributes = new ConcurrentDictionary<string, string>();
             SocialPresenceListeners = new List<ISocialPresence>();
             Configuration = config;
+
             ListenersHolder.SpotifySessionConcurrentDictionary.Add(this);
+
+
             _keys = new DiffieHellman();
             var clHello = NewClientHello();
 
@@ -51,7 +56,7 @@ namespace SpotifyLibV2
             var mercuryClient = new MercuryClient(spotifyClient.GetStream());
 
             SpotifyApiClient = new SpotifyApiClient(mercuryClient);
-            SpotifyReceiver = new SpotifyReceiver(spotifyClient.GetStream(), mercuryClient, new CancellationToken());
+            SpotifyReceiver = new SpotifyReceiver(spotifyClient.GetStream(), mercuryClient, UserAttributes, new CancellationToken());
         }
 
 
@@ -151,14 +156,17 @@ namespace SpotifyLibV2
                 new SpotifyConnectClient(dealerClient, player,
                     connectInterface,
                     SpotifyApiClient.EventsService,
+                    UserAttributes,
                     SpotifyApiClient.Tokens,
                     SpotifyApiClient.ConnectApi,
                     SpotifyApiClient.PlayerClient,
-                    Configuration);
+                    Configuration, ApWelcome);
             SpotifyConnectClient = connectClient;
             connectInterface.Instantiated(connectClient);
             return connectClient;
         }
+
+        public ConcurrentDictionary<string, string> UserAttributes { get; }
 
         public void ApWelcomeReceived(APWelcome apWelcome)
         {
@@ -199,8 +207,11 @@ namespace SpotifyLibV2
 
             var loginCredentialsTask = authenticator.Get();
             await Task.WhenAll(tcpClientTask, loginCredentialsTask);
+
             var ses =
                 new SpotifySession(await loginCredentialsTask, config, await tcpClientTask);
+
+
             ses.MetadataClient = new HttpClient(new AuthenticatedHttpClientHandler(() =>
                 ses.SpotifyApiClient.Tokens.GetToken("playlist-read").AccessToken))
             {

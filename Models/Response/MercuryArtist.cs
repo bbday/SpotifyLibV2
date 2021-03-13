@@ -238,7 +238,7 @@ namespace SpotifyLibV2.Models.Response
     }
     public class ArtistRelated : GenericSpotifyItem
     {
-        private static readonly Regex InitialsRegex = new Regex(@"(\b[a-zA-Z])[a-zA-Z]* ?");
+        private static readonly Regex InitialsRegex = new(@"(\b[a-zA-Z])[a-zA-Z]* ?");
         private string _name;
         [System.Text.Json.Serialization.JsonIgnore]
         public string Initials { get; set; }

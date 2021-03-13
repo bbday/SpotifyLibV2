@@ -21,12 +21,17 @@ namespace SpotifyLibV2.Mercury
     public class MercuryClient : PacketsManager, IMercuryClient
     {
         private volatile int _seqHolder;
+
         private readonly ConcurrentDictionary<long, BytesArrayList> _partials
-            = new ConcurrentDictionary<long, BytesArrayList>();
+            = new();
         private readonly List<InternalSubListener> _subscriptions =
-            new List<InternalSubListener>();
-        private readonly System.Threading.EventWaitHandle _removeCallbackLock = new System.Threading.AutoResetEvent(false);
-        private readonly ConcurrentDictionary<long, ICallback> _callbacks = new ConcurrentDictionary<long, ICallback>();
+            new();
+
+        private readonly System.Threading.EventWaitHandle _removeCallbackLock =
+            new System.Threading.AutoResetEvent(false);
+        private readonly ConcurrentDictionary<long, ICallback> _callbacks = 
+            new();
+
         private static readonly int MercuryRequestTimeout = 3000;
         private readonly ISpotifyStream _stream;
         internal MercuryClient(ISpotifyStream stream)

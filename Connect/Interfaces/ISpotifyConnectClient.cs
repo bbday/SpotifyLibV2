@@ -10,6 +10,7 @@ namespace SpotifyLibV2.Connect.Interfaces
 {
     public interface ISpotifyConnectClient
     {
+        string ActiveDeviceId { get; }
         Task<bool> Connect();
 
         Task<PlayingChangedRequest?> FetchCurrentlyPlaying();

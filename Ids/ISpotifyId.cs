@@ -2,10 +2,6 @@
 
 namespace SpotifyLibV2.Ids
 {
-    public interface ISpotifyDescription : ISpotifyId
-    {
-        string Title { get; }
-    }
     public interface ISpotifyId : IAudioId
     {
         string Uri { get; }

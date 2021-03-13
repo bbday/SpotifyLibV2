@@ -14,7 +14,7 @@ namespace SpotifyLibV2.Helpers
         private byte[] lookup;
         public static Base62Test CreateInstanceWithInvertedCharacterSet()
         {
-            return new Base62Test(CharacterSets.INVERTED);
+            return new(CharacterSets.INVERTED);
         }
         public Base62Test(byte[] alphabet)
         {

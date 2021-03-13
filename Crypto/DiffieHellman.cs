@@ -33,7 +33,7 @@ namespace SpotifyLibV2.Crypto
             (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff
         };
 
-        private static readonly BigInteger Prime = new BigInteger(1, PrimeBytes);
+        private static readonly BigInteger Prime = new(1, PrimeBytes);
         private readonly BigInteger _privateKey;
         private readonly BigInteger _publicKey;
 

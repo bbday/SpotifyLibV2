@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Threading;
+using System.Xml;
 using SpotifyLibV2.Helpers.Extensions;
 using SpotifyLibV2.Listeners;
 using SpotifyLibV2.Mercury;
@@ -11,15 +13,17 @@ namespace SpotifyLibV2
 {
     public class SpotifyReceiver : ISpotifyReceiver
     {
-
+        private ConcurrentDictionary<string, string> _userAttributes;
         private readonly IMercuryClient _mercuryClient;
         private readonly ISpotifyStream _stream;
         private readonly CancellationToken _ctx;
         public SpotifyReceiver(
             ISpotifyStream stream, 
             IMercuryClient mercuryClient,
+            ConcurrentDictionary<string, string> userAttributes,
             CancellationToken? ctx = null)
         {
+            _userAttributes = userAttributes;
             _stream = stream;
             _mercuryClient = mercuryClient;
             _ctx = ctx ?? (new CancellationTokenSource()).Token;
@@ -103,10 +107,27 @@ namespace SpotifyLibV2
                 }
             }
         }
-        private static void ParseProductInfo(byte[] @in)
+        private void ParseProductInfo(byte[] @in)
         {
-            //TODO
-            Debug.WriteLine(Encoding.Default.GetString(@in));
+            var productInfoString = Encoding.Default.GetString(@in);
+            Debug.WriteLine(productInfoString);
+            var xml = new XmlDocument();
+            xml.LoadXml(productInfoString);
+
+            var products = xml.SelectNodes("products");
+            if (products != null && products.Count > 0)
+            {
+                var firstItemAsProducts = products[0];
+
+                var product = firstItemAsProducts.ChildNodes[0];
+
+                var properties = product.ChildNodes;
+                for (int i = 0; i < properties.Count; i++)
+                {
+                    var node = properties.Item(i);
+                    _userAttributes.AddOrUpdate(node.Name, node.InnerText);
+                }
+            }
         }
     }
 }

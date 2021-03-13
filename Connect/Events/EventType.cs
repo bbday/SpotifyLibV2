@@ -53,13 +53,13 @@ namespace SpotifyLibV2.Connect.Events
 
     public class EventType : Enumeration
     {
-        public static readonly EventType LANGUAGE = new EventType(812, 1, "LANGUAGE");
-        public static readonly EventType FETCHED_FILE_ID = new EventType(247, 3, "FETCHED_FILE_ID");
-        public static readonly EventType NEW_SESSION_ID = new EventType(557, 3, "NEW_SESSION_ID");
-        public static readonly EventType NEW_PLAYBACK_ID = new EventType(558, 1, "NEW_PLAYBACK_ID");
-        public static readonly EventType TRACK_PLAYED = new EventType(372, 1, "TRACK_PLAYED");
-        public static readonly EventType TRACK_TRANSITION = new EventType(12, 37, "TRACK_TRANSITION");
-        public static readonly EventType CDN_REQUEST = new EventType(10, 20, "CDN_REQUEST");
+        public static readonly EventType LANGUAGE = new(812, 1, "LANGUAGE");
+        public static readonly EventType FETCHED_FILE_ID = new(247, 3, "FETCHED_FILE_ID");
+        public static readonly EventType NEW_SESSION_ID = new(557, 3, "NEW_SESSION_ID");
+        public static readonly EventType NEW_PLAYBACK_ID = new(558, 1, "NEW_PLAYBACK_ID");
+        public static readonly EventType TRACK_PLAYED = new(372, 1, "TRACK_PLAYED");
+        public static readonly EventType TRACK_TRANSITION = new(12, 37, "TRACK_TRANSITION");
+        public static readonly EventType CDN_REQUEST = new(10, 20, "CDN_REQUEST");
 
         public EventType(int id,
             int unknown,

@@ -143,7 +143,8 @@ namespace SpotifyLibV2.Connect
                     Debug.WriteLine("Handled request. key: {0}, result: {1}", key, result);
                 }
             }
-            if (!interesting) Debug.WriteLine("Couldn't dispatch request: " + mid);
+            if (!interesting) 
+                Debug.WriteLine("Couldn't dispatch request: " + mid);
         }
 
         private void HandleMessage(JObject obj)
@@ -231,7 +232,8 @@ namespace SpotifyLibV2.Connect
                 }
             }
 
-            if (!interesting) Debug.WriteLine("Couldn't dispatch message: " + uri);
+            if (!interesting) 
+                Debug.WriteLine("Couldn't dispatch message: " + uri);
         }
         async Task SendReply([NotNull] string key, [NotNull] RequestResult result)
         {

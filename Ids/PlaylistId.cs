@@ -37,7 +37,6 @@ namespace SpotifyLibV2.Ids
             {
                 this.Id = regexMatch.Groups[2].Value;
                 this.Username = regexMatch.Groups[1].Value;
-                PlaylistType = PlaylistType.UserPlaylist;
             }
             else
             {
@@ -46,7 +45,6 @@ namespace SpotifyLibV2.Ids
                 {
                     this.Id = regexMatch.Groups[2].Value;
                     this.Username = regexMatch.Groups[1].Value;
-                    PlaylistType = PlaylistType.Radio;
                 }
                 else
                 {
@@ -55,7 +53,6 @@ namespace SpotifyLibV2.Ids
                     {
                         this.Id = regexMatch.Groups[2].Value;
                         this.Username = regexMatch.Groups[1].Value;
-                        PlaylistType = PlaylistType.UserPlaylist;
                     }
                     else
                     {
@@ -64,7 +61,6 @@ namespace SpotifyLibV2.Ids
                         {
                             this.Id = regexMatch.Groups[1].Value;
                             this.Username = null;
-                            PlaylistType = PlaylistType.UserPlaylist;
                         }
                         else
                         {
@@ -72,7 +68,6 @@ namespace SpotifyLibV2.Ids
                             if (regexMatch.Success)
                             {
                                 this.Id = regexMatch.Groups[1].Value;
-                                PlaylistType = PlaylistType.MadeForUser;
                             }
                             else
                             {
@@ -81,12 +76,15 @@ namespace SpotifyLibV2.Ids
                                 {
                                     this.Id = regexMatch.Groups[2].Value;
                                     this.Username = regexMatch.Groups[1].Value;
-                                    PlaylistType = PlaylistType.Radio;
                                 }
                                 else
                                 {
-                                    throw new ArgumentOutOfRangeException(nameof(uri),
-                                        "Not a Spotify album ID: " + uri);
+                                    regexMatch = Regex.Match(uri, "spotify:station:(.*)(.{22})");
+                                    if (regexMatch.Success)
+                                    {
+                                        this.Id = regexMatch.Groups[2].Value;
+                                    //    this.Username = regexMatch.Groups[1].Value;
+                                    }
                                 }
                             }
                         }
@@ -94,8 +92,6 @@ namespace SpotifyLibV2.Ids
                 }
             }
 
-            if (chart)
-                PlaylistType = PlaylistType.MadeForUser;
 
             this.Uri = uri;
         }
@@ -118,7 +114,6 @@ namespace SpotifyLibV2.Ids
         }
 
         public AudioType Type { get; }
-        public PlaylistType PlaylistType { get; set; }
 
         public string ToMercuryUri() => ToMercuryUri(false);
 
@@ -147,6 +142,8 @@ namespace SpotifyLibV2.Ids
                 return hashCode;
             }
         }
+
+        public override string ToString() => Uri;
 
         public AudioIdType IdType { get; }
     }

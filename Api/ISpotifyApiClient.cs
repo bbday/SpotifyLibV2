@@ -10,10 +10,14 @@ namespace SpotifyLibV2.Api
         ITokensProvider Tokens { get; }
         IEventsService EventsService { get; }
         IMercuryClient MercuryClient { get; }
+        AsyncLazy<IStorageResolveService> StorageResolve { get; }
+        AsyncLazy<IPlaybackLicense> LicenseService { get; }
+        AsyncLazy<ISeektables> SeekTables { get; }
         AsyncLazy<IPathFinder> PathFinder { get; }
         AsyncLazy<IPlayerClient> PlayerClient { get; }
         AsyncLazy<IConnectState> ConnectApi { get; }
         AsyncLazy<ITrack> Tracks { get; }
+        AsyncLazy<IEpisodes> Episodes { get; }
         AsyncLazy<ILibrary> Library { get; }
         AsyncLazy<IAlbum> Album { get; }
         AsyncLazy<IArtist> Artist { get; }

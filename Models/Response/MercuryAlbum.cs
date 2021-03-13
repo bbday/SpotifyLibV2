@@ -57,7 +57,7 @@ namespace SpotifyLibV2.Models.Response
         public List<string> Copyrights { get; set; }
         [Newtonsoft.Json.JsonIgnore]
         public string DerivedFrom { get; set; }
-
+        [JsonPropertyName("type")]
         public new string Type { get; set; }
     }
 

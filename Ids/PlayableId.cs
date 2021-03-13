@@ -5,12 +5,19 @@ using System.Text;
 using Connectstate;
 using JetBrains.Annotations;
 using Spotify.Player.Proto;
+using SpotifyLibV2.Helpers;
 using SpotifyProto;
 
 namespace SpotifyLibV2.Ids
 {
     public static class PlayableId
     {
+        public static string InferUriPrefix(string contextUri)
+        {
+            if (contextUri.StartsWith("spotify:episode:") || contextUri.StartsWith("spotify:show:"))
+                return "spotify:episode:";
+            return "spotify:track:";
+        }
         public static bool CanPlaySomething([NotNull] List<ContextTrack> tracks)
         {
             return tracks.Any(x => IsSupported(x.Uri) && ShouldPlay(x));

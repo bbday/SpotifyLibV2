@@ -23,7 +23,7 @@ namespace SpotifyLibV2.Enums
                 "set_queue" => Endpoint.SetQueue,
                 "add_to_queue" => Endpoint.AddToQueue,
                 "transfer" => Endpoint.Transfer,
-                _ => Endpoint.Pause
+                _ => Endpoint.Error
             };
         }
     }
@@ -41,6 +41,8 @@ namespace SpotifyLibV2.Enums
         UpdateContext,
         SetQueue,
         AddToQueue,
-        Transfer
+        Transfer,
+
+        Error
     }
 }

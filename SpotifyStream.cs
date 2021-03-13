@@ -23,11 +23,11 @@ namespace SpotifyLibV2
 {
     public class SpotifyStream : NetworkStream, ISpotifyStream
     {
-        private readonly Nito.AsyncEx.AsyncAutoResetEvent _authLockEventWaitHandle = new AsyncAutoResetEvent(false);
-        private readonly Nito.AsyncEx.AsyncLock _authLock = new AsyncLock();
+        private readonly Nito.AsyncEx.AsyncAutoResetEvent _authLockEventWaitHandle = new(false);
+        private readonly Nito.AsyncEx.AsyncLock _authLock = new();
 
-        private readonly Nito.AsyncEx.AsyncLock _recvLock = new AsyncLock();
-        private readonly Nito.AsyncEx.AsyncLock _sendLock = new AsyncLock();
+        private readonly Nito.AsyncEx.AsyncLock _recvLock = new();
+        private readonly Nito.AsyncEx.AsyncLock _sendLock = new();
 
         private readonly byte[] _serverKey =
        {
@@ -76,8 +76,8 @@ namespace SpotifyLibV2
             (byte) 0x19, (byte) 0xe6, (byte) 0x55, (byte) 0xbd
         };
 
-        private volatile Shannon _sendCipher = new Shannon();
-        private volatile Shannon _recvCipher = new Shannon();
+        private volatile Shannon _sendCipher = new();
+        private volatile Shannon _recvCipher = new();
 
         private volatile int recvNonce;
         private volatile int sendNonce;
@@ -397,7 +397,7 @@ namespace SpotifyLibV2
             LoginCredentials credentials,
             SpotifyConfiguration config)
         {
-            return new ClientResponseEncrypted
+            return new()
             {
                 LoginCredentials = credentials,
                 SystemInfo = new SystemInfo

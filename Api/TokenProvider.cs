@@ -12,7 +12,7 @@ namespace SpotifyLibV2.Api
     {
         private static readonly int TOKEN_EXPIRE_THRESHOLD = 10;
         private readonly IMercuryClient _mercuryClient;
-        private readonly List<StoredToken> tokens = new List<StoredToken>();
+        private readonly List<StoredToken> tokens = new();
 
         public TokenProvider(IMercuryClient mercuryClient)
         {

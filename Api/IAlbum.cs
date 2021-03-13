@@ -2,6 +2,7 @@
 using Refit;
 using SpotifyLib.Models.Api.Requests;
 using SpotifyLibV2.Attributes;
+using SpotifyLibV2.Models.Request;
 using SpotifyLibV2.Models.Response;
 
 namespace SpotifyLib.Api
@@ -21,5 +22,15 @@ namespace SpotifyLib.Api
         [Get("/v1/albums/{albumId}")]
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1716")]
         Task<FullAlbum> Get(string albumId, [AliasAs("market")]string market = "from_token");
+        /// <summary>
+        /// Get Spotify catalog information for multiple albums identified by their Spotify IDs.
+        /// </summary>
+        /// <param name="request">The request-model which contains required and optional parameters</param>
+        /// <remarks>
+        /// https://developer.spotify.com/documentation/web-api/reference-beta/#endpoint-get-multiple-albums
+        /// </remarks>
+        /// <returns></returns>
+        [Get("/v1/albums")]
+        Task<AlbumsResponse> GetSeveral(AlbumsRequest request);
     }
 }

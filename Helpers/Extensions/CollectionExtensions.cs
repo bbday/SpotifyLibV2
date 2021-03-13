@@ -1,12 +1,19 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
 namespace SpotifyLibV2.Helpers.Extensions
 {
-    public static class CollectionExtensions
+    public static partial class CollectionExtensions
     {
+        public static void Swap<T>(this IList<T> list, int index1, int index2)
+        {
+            var temp = list[index1];
+            list[index1] = list[index2];
+            list[index2] = temp;
+        }
         public static bool AddOrUpdate<T1, T2>(this IDictionary<T1, T2> dict, T1 key, T2 value)
         {
             if (dict.ContainsKey(key))

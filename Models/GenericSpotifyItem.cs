@@ -49,6 +49,7 @@ namespace SpotifyLibV2.Models
             }
         }
 
+
         [System.Text.Json.Serialization.JsonIgnore]
         [Newtonsoft.Json.JsonIgnore]
         public AudioType Type { get; set; }

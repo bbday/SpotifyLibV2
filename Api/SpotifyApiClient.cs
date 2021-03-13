@@ -30,6 +30,9 @@ namespace SpotifyLibV2.Api
                 await CreateAndRegister<IPlayerClient>()));
             Tracks = new AsyncLazy<ITrack>((async () =>
                 await CreateAndRegister<ITrack>()));
+            
+            Episodes = new AsyncLazy<IEpisodes>((async () =>
+                await CreateAndRegister<IEpisodes>()));
             PathFinder = new AsyncLazy<IPathFinder>(
                 async () => await CreateAndRegister<IPathFinder>());
 
@@ -49,14 +52,27 @@ namespace SpotifyLibV2.Api
 
             Me = new AsyncLazy<IMeClient>(async () =>
                 await CreateAndRegister<IMeClient>());
+
+            LicenseService = new AsyncLazy<IPlaybackLicense>(async () =>
+                await CreateAndRegister<IPlaybackLicense>());
+
+            SeekTables = new AsyncLazy<ISeektables>(async () =>
+                await CreateAndRegister<ISeektables>());
+
+            StorageResolve = new AsyncLazy<IStorageResolveService>(async () =>
+                await CreateAndRegister<IStorageResolveService>());
         }
 
         public AsyncLazy<IHomeClient> Home { get; }
         public IEventsService EventsService { get; }
         public IMercuryClient MercuryClient { get; }
+        public AsyncLazy<IStorageResolveService> StorageResolve { get; }
+        public AsyncLazy<IPlaybackLicense> LicenseService { get; }
+        public AsyncLazy<ISeektables> SeekTables { get; }
         public AsyncLazy<IPathFinder> PathFinder { get; }
         public AsyncLazy<IPlayerClient> PlayerClient { get; }
         public AsyncLazy<ITrack> Tracks { get; }
+        public AsyncLazy<IEpisodes> Episodes { get; }
         public AsyncLazy<IConnectState> ConnectApi { get; }
         public AsyncLazy<ILibrary> Library { get; }
         public AsyncLazy<IAlbum> Album { get; }

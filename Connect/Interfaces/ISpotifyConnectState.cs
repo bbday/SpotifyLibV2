@@ -11,7 +11,7 @@ namespace SpotifyLibV2.Connect.Interfaces
     {
         string ActiveDeviceId { get; set; }
         PlayerState ConnectState { get; }
-        Task UpdateState([NotNull] PutStateReason reason,
+        Task<byte[]> UpdateState([NotNull] PutStateReason reason,
             int playerTime,
             [NotNull] PlayerState state);
     }

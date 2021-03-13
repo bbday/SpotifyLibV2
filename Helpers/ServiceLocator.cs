@@ -22,14 +22,14 @@ namespace SpotifyLibV2.Helpers
     /// </summary>
     public class ServiceLocator : IServiceLocator
     {
-        private readonly Dictionary<Type, ConstructorInfo> _constructorInfos = new Dictionary<Type, ConstructorInfo>();
+        private readonly Dictionary<Type, ConstructorInfo> _constructorInfos = new();
         private readonly string _defaultKey = Guid.NewGuid().ToString();
         private readonly object[] _emptyArguments = new object[0];
-        private readonly Dictionary<Type, Dictionary<string, Delegate>> _factories = new Dictionary<Type, Dictionary<string, Delegate>>();
-        private readonly Dictionary<Type, Dictionary<string, object>> _instancesRegistry = new Dictionary<Type, Dictionary<string, object>>();
-        private readonly Dictionary<Type, Type> _interfaceToClassMap = new Dictionary<Type, Type>();
-        private readonly object _syncLock = new object();
-        private static readonly object _instanceLock = new object();
+        private readonly Dictionary<Type, Dictionary<string, Delegate>> _factories = new();
+        private readonly Dictionary<Type, Dictionary<string, object>> _instancesRegistry = new();
+        private readonly Dictionary<Type, Type> _interfaceToClassMap = new();
+        private readonly object _syncLock = new();
+        private static readonly object _instanceLock = new();
         private static ServiceLocator _default;
 
         /// <summary>This class' default instance.</summary>

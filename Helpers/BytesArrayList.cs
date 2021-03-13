@@ -81,7 +81,7 @@ namespace SpotifyLibV2.Helpers
 
         public string ReadIntoString(int index) => Encoding.Default.GetString(_elementData[0]);
         public BytesArrayList CopyOfRange(int from, int to)
-            => new BytesArrayList(
+            => new(
                 _elementData.Skip(from)
                     .Take(to - from)
                     .ToArray());

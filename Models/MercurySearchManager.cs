@@ -33,9 +33,35 @@ namespace SpotifyLibV2.Models
             _country = country;
         }
 
-        public async Task<ISearchResponse> Request(
-            [NotNull] SearchRequest req,
-            bool outputString)
+        public Task<string> RequestAsString(
+            SearchRequest req,
+            bool outputString,
+            CancellationToken cts = default(CancellationToken))
+        {
+            if (req.Username.IsEmpty()) req.Username = _name;
+            if (req.Country.IsEmpty()) req.Country = _country;
+            if (req.Locale.IsEmpty()) req.Locale = _locale;
+
+            var mercury = _mercury;
+            switch (req.SearchType)
+            {
+                case SearchType.Quick:
+                    return Task.Run<string>(() => (mercury.SendSync(new
+                        JsonMercuryRequest<string>(
+                            RawMercuryRequest.Get(req.BuildUrl())))), cts);
+                case SearchType.Full:
+                    return Task.Run<string>(() => mercury.SendSync(new
+                        JsonMercuryRequest<string>(
+                            RawMercuryRequest.Get(req.BuildUrl()))), cts);
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+        }
+
+        public Task<ISearchResponse> Request(
+            SearchRequest req,
+            bool outputString,
+            CancellationToken cts = default(CancellationToken))
         {
             if (req.Username.IsEmpty()) req.Username = _name;
             if (req.Country.IsEmpty()) req.Country = _country;
@@ -47,19 +73,22 @@ namespace SpotifyLibV2.Models
                 switch (req.SearchType)
                 {
                     case SearchType.Quick:
-                        return await (Task.Run(() => mercury.SendSync(new
+                        return Task.Run<ISearchResponse>(() => (mercury.SendSync(new
                             JsonMercuryRequest<QuickSearch>(
-                                RawMercuryRequest.Get(req.BuildUrl())))));
+                                RawMercuryRequest.Get(req.BuildUrl())))), cts);
                     case SearchType.Full:
-                        return await Task.Run(() => mercury.SendSync(new
-                            JsonMercuryRequest<MercurySearchResponse>(
-                                RawMercuryRequest.Get(req.BuildUrl()))));
+                        return Task.Run<ISearchResponse>(() => mercury.SendSync(new
+                            JsonMercuryRequest<FullSearchResponse>(
+                                RawMercuryRequest.Get(req.BuildUrl()))), cts);
                     default:
                         throw new ArgumentOutOfRangeException();
                 }
             }
             else
             {
+                var test = _mercury.SendSync(new
+                    JsonMercuryRequest<string>(
+                        RawMercuryRequest.Get(req.BuildUrl())));
                 throw new NotImplementedException();
             }
         }

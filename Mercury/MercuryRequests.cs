@@ -4,27 +4,28 @@ using System.Text;
 using JetBrains.Annotations;
 using Spotify;
 using SpotifyLibV2.Models.Public;
+using SpotifyLibV2.Models.Response;
+using SpotifyLibV2.Models.Response.MercuryContext;
 
 namespace SpotifyLibV2.Mercury
 {
     public static class MercuryRequests
     {
         private static readonly string KEYMASTER_CLIENT_ID = "65b708073fc0480ea92a077233ca87bd";
-
-        public static JsonMercuryRequest<string> ResolveContext([NotNull] string uri)
+        public static JsonMercuryRequest<MercuryContextWrapperResponse> ResolveContext([NotNull] string uri)
         {
-            return new JsonMercuryRequest<string>(RawMercuryRequest.Get(
+            return new(RawMercuryRequest.Get(
                 $"hm://context-resolve/v1/{uri}"));
         }
         public static JsonMercuryRequest<StoredToken> RequestToken([NotNull] string deviceId, [NotNull] string[] scope)
         {
-            return new JsonMercuryRequest<StoredToken>(RawMercuryRequest.Get(
+            return new(RawMercuryRequest.Get(
                 $"hm://keymaster/token/authenticated?scope={string.Join(",", scope)}&client_id={KEYMASTER_CLIENT_ID}&device_id={deviceId}"));
         }
 
         public static JsonMercuryRequest<string> GetGenericJson([NotNull] string uri)
         {
-            return new JsonMercuryRequest<string>(RawMercuryRequest.Get(uri));
+            return new(RawMercuryRequest.Get(uri));
         }
 
         // public static JsonMercuryRequest<MercuryArtist> GetArtist([NotNull] ArtistId id)
@@ -37,7 +38,7 @@ namespace SpotifyLibV2.Mercury
         }
         public static JsonMercuryRequest<string> GetStationFor([NotNull] string context)
         {
-            return new JsonMercuryRequest<string>(RawMercuryRequest.Get("hm://radio-apollo/v3/stations/" + context));
+            return new(RawMercuryRequest.Get("hm://radio-apollo/v3/stations/" + context));
         }
         public static ProtobuffedMercuryRequest<MercuryMultiGetReply> MultiGet(string uri, IEnumerable<MercuryRequest> requests)
         {

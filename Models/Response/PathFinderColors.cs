@@ -10,6 +10,11 @@ namespace SpotifyLibV2.Models.Response
         [JsonProperty("extractedColor")]
         public ExtractedColor ExtractedColor { get; set; }
     }
+    public partial class PathfinderColorsAsArray
+    {
+        [JsonProperty("extractedColors")]
+        public List<ExtractedColor> ExtractedColor { get; set; }
+    }
 
     public partial class ExtractedColor
     {

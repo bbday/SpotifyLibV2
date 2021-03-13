@@ -6,7 +6,7 @@ namespace SpotifyLibV2.Listeners
     {
         public static List<ISpotifySessionListener>
             SpotifySessionConcurrentDictionary =
-                new List<ISpotifySessionListener>();
+                new();
 
     }
 }

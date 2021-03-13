@@ -15,7 +15,7 @@ namespace SpotifyLibV2.Mercury
 
         public static RawMercuryRequest Get(string uri)
         {
-            return new RawMercuryRequest(uri, "GET");
+            return new(uri, "GET");
         }
         public static RawMercuryRequest Sub(string uri)
         {
@@ -25,7 +25,7 @@ namespace SpotifyLibV2.Mercury
         }
         public static RawMercuryRequest Unsub(string uri)
         {
-            return new RawMercuryRequest(uri, "UNSUB");
+            return new(uri, "UNSUB");
         }
 
         public RawMercuryRequest(string uri,

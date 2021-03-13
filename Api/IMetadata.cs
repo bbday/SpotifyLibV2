@@ -1,5 +1,6 @@
 ﻿using System.Net.Http;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 using Refit;
 using SpotifyLibV2.Attributes;
 using SpotifyLibV2.Models.Request;
@@ -10,8 +11,11 @@ namespace SpotifyLibV2.Api
     [ResolvedSpClientEndpoint]
     public interface IMetadata
     {
+        [Get("/playlist/v2/playlist/{plistId}")]
+        Task<HttpResponseMessage> GetPlaylistWithContent(string plistId, [Header("Accept")] string accept);
+
         [Get("/playlist/v2/playlist/{plistId}/metadata")]
-        Task<PlaylistMetadataProto> GetMetadataForPlaylist(string plistId);
+        Task<HttpResponseMessage> GetMetadataForPlaylist(string plistId);
 
         [Get(
             "/user-profile-view/v3/profile/{userId}")]

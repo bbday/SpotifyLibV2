@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Memory;
@@ -30,5 +31,6 @@ namespace SpotifyLibV2.Interfaces
         ISpotifyConnectClient AttachClient(ISpotifyConnectReceiver connectInterface,
             ISpotifyPlayer player,
             WebsocketHandler handler);
+        ConcurrentDictionary<string, string> UserAttributes { get; }
     }
 }

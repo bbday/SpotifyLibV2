@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Serialization;
 using System.Text;
 using Base62;
 using SpotifyLibV2.Enums;
@@ -38,7 +39,7 @@ namespace SpotifyLibV2.Ids
             var j = "spotify:track:" + Encoding.Default.GetString(k);
             return new TrackId(j);
         }
-        public string Uri { get; }
+        public string Uri { get; set; }
         public string Id { get; }
         public string ToHexId()
         {
@@ -52,8 +53,7 @@ namespace SpotifyLibV2.Ids
         }
 
         public string ToMercuryUri() => $"hm://metadata/4/track/{ToHexId()}?locale={_locale}";
-
-        public AudioType Type { get; }
+        public AudioType Type { get; set; }
 
         public override bool Equals(object obj) => obj is TrackId trackId && trackId.Uri == Uri;
 
@@ -74,7 +74,6 @@ namespace SpotifyLibV2.Ids
                 return hashCode;
             }
         }
-
         public AudioIdType IdType { get; }
 
         public override string ToString()

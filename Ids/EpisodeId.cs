@@ -72,6 +72,7 @@ namespace SpotifyLibV2.Ids
                 return hashCode;
             }
         }
+        public override string ToString() => Uri;
 
         public AudioIdType IdType { get; }
     }

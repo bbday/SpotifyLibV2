@@ -11,7 +11,7 @@ namespace SpotifyLibV2.Config
     {
         public static SpotifyConfiguration Default()
         {
-            return new SpotifyConfiguration("Ongaku PC", 
+            return new("Ongaku PC", 
                 DeviceType.Computer, 
                 "en",
                 null);

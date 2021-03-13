@@ -13,7 +13,7 @@ namespace SpotifyLibV2.Mercury
     public class JsonMercuryRequest<T> where T : class
     {
         public readonly RawMercuryRequest Request;
-        private static JsonSerializerOptions jsonSerializerOptions = new JsonSerializerOptions
+        private static JsonSerializerOptions jsonSerializerOptions = new()
         {
             IgnoreNullValues = true
         };

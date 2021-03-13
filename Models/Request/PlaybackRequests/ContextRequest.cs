@@ -108,7 +108,7 @@ namespace SpotifyLibV2.Models.Request.PlaybackRequests
                         Metadata = new object(),
                         Pages = new List<RequestContextPage>
                         {
-                            new RequestContextPage
+                            new()
                             {
                                 Tracks = _uris.Select(z => new ContextPageTrack
                                 {

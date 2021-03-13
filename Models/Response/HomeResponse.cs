@@ -85,7 +85,7 @@ namespace SpotifyLibV2.Models.Response
     public class FluffyItem : GenericSpotifyItem
     {
         private string _desc;
-
+        [JsonPropertyName("public")] public bool? Public { get; set; }
         [JsonPropertyName("collaborative")] public bool? Collaborative { get; set; }
 
         [JsonPropertyName("description")]
@@ -100,7 +100,8 @@ namespace SpotifyLibV2.Models.Response
 
         [JsonPropertyName("images")] public List<SpotifyImage> Images { get; set; }
 
-        [JsonPropertyName("name")] public string Name { get; set; }
+        [JsonPropertyName("name")] 
+        public string Name { get; set; }
         [JsonPropertyName("artists")]
         public Artist[] Artists { get; set; }
 
@@ -108,6 +109,16 @@ namespace SpotifyLibV2.Models.Response
         public string GroupName { get; set; }
         [Newtonsoft.Json.JsonIgnore]
         public string GroupTagLine { get; set; }
+
+        [JsonPropertyName("type")]
+        public string StringType
+        {
+            get;
+            set;
+        }
+
+        [JsonPropertyName("owner")]
+        public PublicUser Owner { get; set; }
     }
 
     public class Artist : GenericSpotifyItem

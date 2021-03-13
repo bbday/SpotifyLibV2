@@ -5,8 +5,10 @@ using SpotifyLibV2.Connect.Interfaces;
 using SpotifyLibV2.Enums;
 using SpotifyLibV2.Models.Public;
 using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using Spotify;
 using SpotifyLibV2.Ids;
 using SpotifyLibV2.Listeners;
 using SpotifyLibV2.Models.Request;
@@ -23,27 +25,35 @@ namespace SpotifyLibV2.Connect
         private readonly AsyncLazy<IPlayerClient> _playerApi;
         private readonly SpotifyConfiguration _config;
         private readonly AsyncLazy<IConnectState> _connectApi;
+        private readonly APWelcome _apWelcome;
+
         public SpotifyConnectClient(
             IDealerClient dealerClient, 
             ISpotifyPlayer player, 
             ISpotifyConnectReceiver receiver, 
             IEventsService events,
+            ConcurrentDictionary<string, string> attributes,
             ITokensProvider tokens,
             AsyncLazy<IConnectState> connectApi,
             AsyncLazy<IPlayerClient> playerApi,
-            SpotifyConfiguration config)
+            SpotifyConfiguration config, APWelcome apWelcome)
         {
             _dealerClient = dealerClient;
             _player = player;
             _playerApi = playerApi;
             _connectApi = connectApi;
             _config = config;
-            _connectState = new SpotifyConnectState(dealerClient, receiver,
+            _apWelcome = apWelcome;
+            _connectState = new SpotifyConnectState(dealerClient,
+                player,
+                receiver,
                 tokens,
-                config,
+                config, attributes,
                 0,
-                100);
+                100, apWelcome, events);
         }
+
+        public string ActiveDeviceId => _connectState?.ActiveDeviceId;
         public Task<bool> Connect() => _dealerClient.Connect();
 
         public async Task<PlayingChangedRequest?> FetchCurrentlyPlaying()

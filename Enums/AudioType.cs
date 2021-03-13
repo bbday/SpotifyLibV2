@@ -25,6 +25,8 @@ namespace SpotifyLibV2.Enums
         [String("PLAYLIST")] UserPlaylist,
         [String("CHART")] ChartedList,
         [String("A PLAYLIST MADE FOR {0}")] MadeForUser,
-        [String("RADIO")] Radio
+        [String("RADIO")] Radio,
+        [String("SEEDED")] SeededRadio,
+        [String("LIKED SONGS")] Collection,
     }
 }
