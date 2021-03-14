@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Spotify;
 using SpotifyLibV2.Ids;
 using SpotifyLibV2.Listeners;
+using SpotifyLibV2.Mercury;
 using SpotifyLibV2.Models.Request;
 using SpotifyLibV2.Models.Request.PlaybackRequests;
 
@@ -32,6 +33,7 @@ namespace SpotifyLibV2.Connect
             ISpotifyPlayer player, 
             ISpotifyConnectReceiver receiver, 
             IEventsService events,
+            IMercuryClient mercury,
             ConcurrentDictionary<string, string> attributes,
             ITokensProvider tokens,
             AsyncLazy<IConnectState> connectApi,
@@ -48,6 +50,7 @@ namespace SpotifyLibV2.Connect
                 player,
                 receiver,
                 tokens,
+                mercury,
                 config, attributes,
                 0,
                 100, apWelcome, events);

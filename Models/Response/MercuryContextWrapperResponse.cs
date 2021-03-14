@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using Newtonsoft.Json;
 
@@ -12,7 +13,7 @@ namespace SpotifyLibV2.Models.Response.MercuryContext
         public Metadata Metadata { get; set; }
 
         [JsonPropertyName("pages")]
-        public object Pages { get; set; }
+        public JsonElement Pages { get; set; }
 
         [JsonPropertyName("uri")]
         public string Uri { get; set; }

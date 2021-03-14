@@ -18,6 +18,22 @@ namespace SpotifyLibV2.Helpers
 {
     public class ProtoUtils
     {
+        public static bool TrackEquals(ContextTrack first, ContextTrack second)
+        {
+            if (first == null || second == null) return false;
+            if (first == second) return true;
+
+            if (first.HasUri && !first.Uri.IsEmpty() && second.HasUri && !second.Uri.IsEmpty())
+                return first.Uri.Equals(second.Uri);
+
+            if (first.HasGid && !second.HasGid)
+                return first.Gid.Equals(second.Gid);
+
+            if (first.HasUid && !first.Uid.IsEmpty() && second.HasUid && !second.Uid.IsEmpty())
+                return first.Uid.Equals(second.Uid);
+
+            return false;
+        }
         public static List<ContextTrack> JsonToContextTracks([NotNull] JArray array)
         {
             return array.Select(JsonToContextTrack).ToList();

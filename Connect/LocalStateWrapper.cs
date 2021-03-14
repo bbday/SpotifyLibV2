@@ -10,6 +10,8 @@ using JetBrains.Annotations;
 using Org.BouncyCastle.Utilities.Encoders;
 using Spotify;
 using Spotify.Player.Proto;
+using Spotify.Player.Proto.Transfer;
+using SpotifyLibV2.Api;
 using SpotifyLibV2.Config;
 using SpotifyLibV2.Connect.Contexts;
 using SpotifyLibV2.Connect.Interfaces;
@@ -20,6 +22,7 @@ using SpotifyLibV2.Helpers;
 using SpotifyLibV2.Helpers.Extensions;
 using SpotifyLibV2.Ids;
 using SpotifyLibV2.Listeners;
+using SpotifyLibV2.Mercury;
 using SpotifyLibV2.Models;
 using ContextPlayerOptions = Connectstate.ContextPlayerOptions;
 
@@ -51,27 +54,37 @@ namespace SpotifyLibV2.Connect
         }
 
 
-        private readonly PagesLoader _pages;
+        public PagesLoader Pages
+        {
+            get;
+            private set;
+        }
         private TracksKeeper.TracksKeeper _tracksKeeper;
         private readonly APWelcome _apWelcome;
         private readonly ISpotifyPlayer _player;
         private readonly SpotifyConfiguration _playerConfiguration;
         private ConcurrentDictionary<string, string> _attributes;
         private readonly PlayerState _state;
-
+        private readonly IMercuryClient _mercuryClient;
+        private readonly ISpotifyConnectState _connectState;
         internal LocalStateWrapper(ISpotifyPlayer player,
             SpotifyConfiguration playerConfiguration, 
-            ConcurrentDictionary<string, string> attributes, APWelcome apWelcome)
+            ConcurrentDictionary<string, string> attributes, APWelcome apWelcome, IMercuryClient mercuryClient, 
+            ISpotifyConnectState connectState)
         {
             _player = player;
             _playerConfiguration = playerConfiguration;
             _attributes = attributes;
             _apWelcome = apWelcome;
+            _mercuryClient = mercuryClient;
+            _connectState = connectState;
             _state = InitState(new PlayerState());
         }
 
-        public AbsSpotifyContext Context { get; }
+        public string SessionId => _state.SessionId;
+        public AbsSpotifyContext Context { get; private set; }
 
+        public void SetPlaybackId(string playbackId) => _state.PlaybackId = playbackId;
         private static PlayerState InitState([NotNull] PlayerState builder)
         {
             builder.PlaybackSpeed = 1;
@@ -92,6 +105,63 @@ namespace SpotifyLibV2.Connect
         }
 
 
+        public async Task<string> Transfer(TransferState command)
+        {
+            var ps = command.CurrentSession;
+
+            _state.PlayOrigin = ProtoUtils.ConvertPlayOrigin(ps.PlayOrigin);
+            _state.Options = ProtoUtils.ConvertPlayerOptions(command.Options);
+            var sessionId = SetContext(ps.Context);
+
+            var pb = command.Playback;
+            try
+            {
+                _tracksKeeper.InitializeFrom(list =>
+                {
+                    for (int i = 0; i < list.Count; i++)
+                    {
+                        var track = list[i];
+                        if (track.HasUid && ps.CurrentUid.Equals(track.Uid) ||
+                            ProtoUtils.TrackEquals(track, pb.CurrentTrack))
+                        {
+                            return i;
+                        }
+                    }
+                    return -1;
+                }, pb.CurrentTrack, command.Queue);
+            }
+            catch(IllegalStateException ex)
+            {
+                Debug.Write(ex.ToString());
+                _tracksKeeper.InitializeStart();
+            }
+
+            _state.PositionAsOfTimestamp = pb.PositionAsOfTimestamp;
+            if (pb.IsPaused) _state.Timestamp = TimeProvider.CurrentTimeMillis();
+            else _state.Timestamp = pb.Timestamp;
+
+            LoadTransforming();
+            return sessionId;
+        }
+
+        public void LoadTransforming()
+        {
+            if (_tracksKeeper == null) throw new IllegalStateException();
+
+            var url = _state.ContextMetadata.GetMetadataOrDefault("transforming.url", null);
+            if (url == null) return;
+
+            var shuffle = false;
+            if (_state.ContextMetadata.ContainsKey("transforming.shuffle"))
+                shuffle = bool.Parse(_state.ContextMetadata["transforming.shuffle"]);
+
+            var willRequest = !_state.Track.Metadata.ContainsKey("audio.fwdbtn.fade_overlap");
+            Debug.WriteLine($"Context has transforming: {url}, shuffle: {shuffle}, willRequest: {willRequest}");
+
+            if (!willRequest) return;
+
+            //Todo ?
+        }
         public Task OnMessage(string uri, Dictionary<string, string> headers, byte[] payload)
         {
             //TODO: Prolly gonna have to rework playlist services/handlers/listeners for now we can ignore.
@@ -158,8 +228,87 @@ namespace SpotifyLibV2.Connect
         }
 
         public bool IsActive() => _player.IsActive;
+        private string SetContext(Context ctx)
+        {
+            var uri = ctx.Uri;
+            Context = AbsSpotifyContext.From(uri);
+            _state.ContextUri = uri;
 
-        private void SetState(bool playing, bool paused, bool buffering)
+            if (!Context.IsFinite())
+            {
+                SetRepeatingContext(false);
+                SetShufflingContext(false);
+            }
+
+            if (ctx.HasUrl) _state.ContextUrl = ctx.Url;
+            else _state.ContextUrl = string.Empty;
+
+            _state.ContextMetadata.Clear();
+            ProtoUtils.CopyOverMetadata(ctx, _state);
+            
+
+            Pages = PagesLoader.From(_mercuryClient, uri);
+            _tracksKeeper = new TracksKeeper.TracksKeeper(this, _state, Context);
+
+            _player.IsActive = true;
+
+            return RenewSessionId();
+        }
+        private string SetContext(string uri)
+        {
+            Context = AbsSpotifyContext.From(uri);
+            _state.ContextUri = uri;
+
+            if (!Context.IsFinite())
+            {
+                SetRepeatingContext(false);
+                SetShufflingContext(false);
+            }
+
+            _state.ContextUrl = string.Empty;
+            _state.Restrictions = new Connectstate.Restrictions();
+            _state.ContextRestrictions = new Connectstate.Restrictions();
+            _state.ContextMetadata.Clear();
+
+            Pages = PagesLoader.From(_mercuryClient, uri);
+            _tracksKeeper = new TracksKeeper.TracksKeeper(this, _state, Context);
+
+            _player.IsActive = true;
+
+            return RenewSessionId();
+        }
+
+        public double Position => _state.Position;
+        public void SetPosition(long pos)
+        {
+            _state.Timestamp = TimeProvider.CurrentTimeMillis();
+            _state.PositionAsOfTimestamp = pos;
+            _state.Position = 0L;
+        }
+
+        public void UpdateRestrictions()
+        {
+            if (Context == null) return;
+
+            if(_tracksKeeper.IsPlayingFirst() && !IsRepeatingContext)
+                Context.Restrictions.Disallow(RestrictionsManager.Action.SKIP_PREV, RestrictionsManager.REASON_NO_PREV_TRACK);
+            else
+                Context.Restrictions.Allow(RestrictionsManager.Action.SKIP_PREV);
+
+            if (_tracksKeeper.IsPlayingLast() && !IsRepeatingContext)
+                Context.Restrictions.Disallow(RestrictionsManager.Action.SKIP_NEXT, RestrictionsManager.REASON_NO_NEXT_TRACK);
+            else
+                Context.Restrictions.Allow(RestrictionsManager.Action.SKIP_NEXT);
+
+            _state.Restrictions = Context.Restrictions.ToProto();
+            _state.ContextRestrictions = Context.Restrictions.ToProto();
+        }
+        public Task Updated()
+        {
+            UpdateRestrictions(); 
+            return _connectState.UpdateState(PutStateReason.PlayerStateChanged, _player.Time, _state);
+        }
+        public void SetState(bool playing, bool paused, bool buffering)
         {
             if (paused && !playing) throw new IllegalStateException();
             else if (buffering && !playing) throw new IllegalStateException();
@@ -169,8 +318,8 @@ namespace SpotifyLibV2.Connect
             _state.IsPaused = paused;
             _state.IsBuffering = buffering;
 
-        //    if (wasPaused && !paused) // Assume the position was set immediately before pausing
-               // SetPosition(_state.PositionAsOfTimestamp);
+            if (wasPaused && !paused) // Assume the position was set immediately before pausing
+                SetPosition(_state.PositionAsOfTimestamp);
         }
 
         public string ContextUrl => _state.ContextUrl;
@@ -183,7 +332,7 @@ namespace SpotifyLibV2.Connect
                 {
                     if (_tracksKeeper != null)
                     {
-                        //TODO: return _tracksKeeper size
+                        return (uint)_tracksKeeper.Tracks.Count;
                     }
                     else
                     {
@@ -197,7 +346,7 @@ namespace SpotifyLibV2.Connect
 
         public IPlayableId GetPlayableItem => _tracksKeeper == null 
             ? null : 
-            PlayableId.FromUri(_state.Track.Uri);
+            PlayableId.From(_state.Track);
 
         public bool IsPaused => _state.IsPlaying && _state.IsPaused;
         public bool IsShufflingContext => _state.Options.ShufflingContext;
@@ -230,6 +379,13 @@ namespace SpotifyLibV2.Connect
         {
             if (Context == null) return;
             _state.Options.RepeatingTrack = true && Context.Restrictions.Can(RestrictionsManager.Action.REPEAT_TRACK);
+        }
+
+        private string RenewSessionId()
+        {
+            var sessionId = GenerateSessionId();
+            _state.SessionId = sessionId;
+            return sessionId;
         }
     }
 

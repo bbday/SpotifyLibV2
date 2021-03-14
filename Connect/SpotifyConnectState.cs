@@ -21,10 +21,13 @@ using SpotifyLibV2.Config;
 using SpotifyLibV2.Connect.Contexts;
 using SpotifyLibV2.Connect.Events;
 using SpotifyLibV2.Connect.Interfaces;
+using SpotifyLibV2.Connect.PlayerSessions;
+using SpotifyLibV2.Connect.Transitions;
 using SpotifyLibV2.Enums;
 using SpotifyLibV2.Exceptions;
 using SpotifyLibV2.Helpers;
 using SpotifyLibV2.Listeners;
+using SpotifyLibV2.Mercury;
 using SpotifyLibV2.Models;
 using SpotifyLibV2.Models.Public;
 using SpotifyLibV2.Models.Request;
@@ -48,13 +51,14 @@ namespace SpotifyLibV2.Connect
         private readonly ISpotifyPlayer _player;
         private readonly APWelcome _apWelcome;
         private readonly IEventsService _events;
-
+        private PlayerSession _playerSession;
         private readonly LocalStateWrapper _stateWrapper;
         public SpotifyConnectState(
             IDealerClient dealerClient,
             ISpotifyPlayer device,
             ISpotifyConnectReceiver receiver,
             ITokensProvider tokens,
+            IMercuryClient mercury,
             SpotifyConfiguration config,
             ConcurrentDictionary<string, string> attributes,
             uint initialVolume,
@@ -67,7 +71,7 @@ namespace SpotifyLibV2.Connect
             _apWelcome = apWelcome;
             _events = events;
             _tokens = tokens;
-            _stateWrapper = new LocalStateWrapper(device, config, attributes, apWelcome);
+            _stateWrapper = new LocalStateWrapper(device, config, attributes, apWelcome, mercury, this);
 
             this._deviceInfo = InitializeDeviceInfo(initialVolume, volumeSteps);
             this._putState = new PutStateRequest
@@ -398,9 +402,10 @@ namespace SpotifyLibV2.Connect
 
             try
             {
-           //     var sessionId = _stateWrapper.Transfer(transferData); //TODO
+               var sessionId = await 
+                   _stateWrapper.Transfer(transferData); //TODO
                // _events.OnContextChanged() //not relevant
-               //await LoadSession(sessionId, )
+               await LoadSession(sessionId, !transferData.Playback.IsPaused, true);
             }
             catch (Exception x)
             {
@@ -422,22 +427,34 @@ namespace SpotifyLibV2.Connect
             }
         }
 
-        private Task LoadSession(string sessionId)
+        private Task LoadSession(string sessionId, bool play, bool withSkip)
         {
             Debug.WriteLine($"Loading session, id {sessionId}");
 
-            //var transitionInfo = TransitionInfo
+            var transitionInfo = TransitionInfo.ContextChange(_stateWrapper, withSkip);
 
-          //  _playerSession = new _playerSession();
+            _playerSession = new PlayerSession(_player, _config, sessionId);
             _events.SendEvent(new NewSessionIdEvent(sessionId, _stateWrapper).BuildEvent());
 
-            return LoadTrack();
+            return LoadTrack(play, transitionInfo);
         }
 
-        private async Task LoadTrack()
+        private async Task LoadTrack(bool willPlay, TransitionInfo transitioninfo)
         {
             Debug.WriteLine($"Loading track id: {_stateWrapper.GetPlayableItem}");
+            var playbackId = await _playerSession.Play(_stateWrapper.GetPlayableItem, _stateWrapper.Position,
+                transitioninfo.StartedReason);
+            _stateWrapper.SetPlaybackId(playbackId);
+
+            _events.SendEvent(new NewPlaybackIdEvent(_stateWrapper.SessionId, playbackId).BuildEvent());
+
+            if (willPlay) await _player.Play();
+            else await _player.Pause(false);
+
+            _stateWrapper.SetState(true, !willPlay, true);
+            await _stateWrapper.Updated();
         }
+
         private void NotifyCommand([NotNull] Endpoint endpoint, [NotNull] CommandBody data)
         {
             if (_player == null)

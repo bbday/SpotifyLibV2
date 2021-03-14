@@ -19,7 +19,9 @@ namespace SpotifyLibV2.Connect.Interfaces
         Task Play();
         Task<(Track track, Episode episode)> Load(IPlayableId id, bool preloaded,  int initialSeek);
         void NotActive();
+        bool IsActive { get; set; }
+        int Time { get; }
 
-        bool IsActive { get; }
+        Task ClearOutput();
     }
 }

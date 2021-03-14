@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using JetBrains.Annotations;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -31,6 +32,7 @@ namespace SpotifyLibV2.Connect.Contexts
             _pages = new List<ContextPage>();
         }
 
+        public List<ContextTrack> CurrentPage() => GetPage(_currentPage);
         public static PagesLoader From(IMercuryClient mercury, string contextUri)
             => new PagesLoader(mercury)
             {
@@ -82,8 +84,9 @@ namespace SpotifyLibV2.Connect.Contexts
             if (pageIndex == 0 && !_pages.Any() && ResolveUrl != null)
             {
                 var resolvedPages = _mercuryClient.SendSync(MercuryRequests.ResolveContext(ResolveUrl));
-                var serialized = JObject.Parse(JsonConvert.SerializeObject(resolvedPages.Pages));
-                 _pages.AddRange(ProtoUtils.JsonToContextPages(serialized["pages"] as JArray ?? throw new InvalidOperationException()));
+                //     var serialized = JObject.Parse(JsonConvert.SerializeObject(resolvedPages.Pages));
+                var str = JArray.Parse(resolvedPages.Pages.ToString());
+                _pages.AddRange(ProtoUtils.JsonToContextPages(str as JArray ?? throw new InvalidOperationException()));
             }
 
             ResolveUrl = null;
