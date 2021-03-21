@@ -246,6 +246,10 @@ namespace SpotifyLibV2.Mercury
             else throw new MercuryException(resp);
         }
 
+        public void Send(MercuryPacketType type, byte[] info)
+        {
+            _stream.Send(type, info, CancellationToken.None);
+        }
         public int Send(RawMercuryRequest request, ICallback callback)
         {
             var partial = new List<byte[]>();

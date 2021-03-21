@@ -5,6 +5,7 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Xml;
+using SpotifyLibV2.Audio.Decrypt;
 using SpotifyLibV2.Helpers.Extensions;
 using SpotifyLibV2.Listeners;
 using SpotifyLibV2.Mercury;
@@ -15,15 +16,16 @@ namespace SpotifyLibV2
     {
         private ConcurrentDictionary<string, string> _userAttributes;
         private readonly IMercuryClient _mercuryClient;
+        private readonly IAudioKey _audioKey;
         private readonly ISpotifyStream _stream;
         private readonly CancellationToken _ctx;
         public SpotifyReceiver(
             ISpotifyStream stream, 
             IMercuryClient mercuryClient,
-            ConcurrentDictionary<string, string> userAttributes,
-            CancellationToken? ctx = null)
+            ConcurrentDictionary<string, string> userAttributes, IAudioKey audioKey, CancellationToken? ctx = null)
         {
             _userAttributes = userAttributes;
+            _audioKey = audioKey;
             _stream = stream;
             _mercuryClient = mercuryClient;
             _ctx = ctx ?? (new CancellationTokenSource()).Token;
@@ -103,6 +105,10 @@ namespace SpotifyLibV2
 
                     case MercuryPacketType.Unknown_0x10:
                         Debug.WriteLine("Received 0x10 : " + packet.Payload.BytesToHex());
+                        break;
+                    case MercuryPacketType.AesKey:
+                    case MercuryPacketType.AesKeyError:
+                        _audioKey.Dispatch(packet);
                         break;
                 }
             }

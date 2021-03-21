@@ -25,6 +25,7 @@ namespace SpotifyLibV2.Mercury
         int Send([NotNull] RawMercuryRequest request,
             [NotNull] ICallback callback);
 
+        void Send(MercuryPacketType type, byte[] info);
         void Dispatch(MercuryPacket packet);
     }
 }

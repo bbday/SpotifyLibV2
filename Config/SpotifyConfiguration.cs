@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using System;
 using Connectstate;
+using SpotifyLibV2.Audio;
 using SpotifyLibV2.Helpers;
 using SpotifyLibV2.Helpers.Extensions;
 using SpotifyLibV2.Models.Public;
@@ -36,7 +37,7 @@ namespace SpotifyLibV2.Config
             PreferredLocale = preferredLocale;
             DeviceName = deviceName;
             DeviceId = deviceId ?? Utils.RandomHexString(40).ToLower();
-
+            PrefereAudioQuality = AudioQualityHelper.AudioQuality.NORMAL;
         }
         public readonly Func<StoredCredentials, string>? StoreCredentialsFunction;
         public readonly bool StoreCredentials;
@@ -54,5 +55,10 @@ namespace SpotifyLibV2.Config
         }
         public string Country { get; internal set; }
         public string DeviceId { get; private set; }
+
+        public AudioQualityHelper.AudioQuality PrefereAudioQuality
+        {
+            get; set;
+        }
     }
 }

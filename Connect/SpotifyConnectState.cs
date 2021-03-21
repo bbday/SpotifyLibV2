@@ -448,8 +448,9 @@ namespace SpotifyLibV2.Connect
 
             _events.SendEvent(new NewPlaybackIdEvent(_stateWrapper.SessionId, playbackId).BuildEvent());
 
-            if (willPlay) await _player.Play();
-            else await _player.Pause(false);
+            throw new NotImplementedException();
+            //  if (willPlay) await _player.Play();
+            // else await _player.Pause(false);
 
             _stateWrapper.SetState(true, !willPlay, true);
             await _stateWrapper.Updated();

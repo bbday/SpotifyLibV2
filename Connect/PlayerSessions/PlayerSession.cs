@@ -152,8 +152,9 @@ namespace SpotifyLibV2.Connect.PlayerSessions
 
         }
 
-        public Task Play() => _player.Load(Id, preloaded, _initialSeek);
-
+        public Task Play() =>
+             //_player.Load(Id, preloaded, _initialSeek);
+             throw new NotImplementedException();
         public bool Equals(PlayerQueueEntry other)
         {
             return Equals(Id, other.Id);
@@ -193,8 +194,9 @@ namespace SpotifyLibV2.Connect.PlayerSessions
             SessionId = sessionId;
             
             Debug.WriteLine($"Created new session: {sessionId}");
+            throw new NotImplementedException();
 
-            _ = player.ClearOutput();
+           // _ = player.ClearOutput();
         }
         private readonly PlayerQueue _queue; 
         private int LastPlayPos = 0;

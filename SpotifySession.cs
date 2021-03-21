@@ -12,6 +12,11 @@ using Spotify.Social;
 using SpotifyLibV2.Abstractions;
 using SpotifyLibV2.Api;
 using SpotifyLibV2.Attributes;
+using SpotifyLibV2.Audio;
+using SpotifyLibV2.Audio.Cache;
+using SpotifyLibV2.Audio.Cdn;
+using SpotifyLibV2.Audio.Channels;
+using SpotifyLibV2.Audio.Decrypt;
 using SpotifyLibV2.Authentication;
 using SpotifyLibV2.Config;
 using SpotifyLibV2.Connect;
@@ -28,15 +33,19 @@ namespace SpotifyLibV2
 {
     public class SpotifySession : ISpotifySessionListener, ISpotifySession
     {
+        private IAudioKey _audioKey;
         private readonly DiffieHellman _keys;
         private ISpotifyConnectClient _spotifyConnectClient;
         private static MemoryCache _cache;
 
         private SpotifySession(
+            ISpotifyPlayer player,
             LoginCredentials credentials,
             SpotifyConfiguration config,
             SpotifyClient spotifyClient)
         {
+            Player = player;
+            Player.Session = this;
             UserAttributes = new ConcurrentDictionary<string, string>();
             SocialPresenceListeners = new List<ISocialPresence>();
             Configuration = config;
@@ -56,7 +65,9 @@ namespace SpotifyLibV2
             var mercuryClient = new MercuryClient(spotifyClient.GetStream());
 
             SpotifyApiClient = new SpotifyApiClient(mercuryClient);
-            SpotifyReceiver = new SpotifyReceiver(spotifyClient.GetStream(), mercuryClient, UserAttributes, new CancellationToken());
+            SpotifyReceiver = new SpotifyReceiver(spotifyClient.GetStream(), mercuryClient, UserAttributes,
+                AudioKeyManager, 
+                new CancellationToken());
         }
 
 
@@ -92,7 +103,6 @@ namespace SpotifyLibV2
             }
             private set => _spotifyConnectClient = value;
         }
-
         public List<ISocialPresence> SocialPresenceListeners { get; }
         public string CountryCode { get; set; }
 
@@ -146,14 +156,13 @@ namespace SpotifyLibV2
 
         public ISpotifyConnectClient AttachClient(
             ISpotifyConnectReceiver connectInterface,
-            ISpotifyPlayer player,
             WebsocketHandler handler)
         {
             IDealerClient dealerClient =
                 new DealerClient(SpotifyApiClient.Tokens, handler);
             dealerClient.Attach();
             ISpotifyConnectClient connectClient =
-                new SpotifyConnectClient(dealerClient, player,
+                new SpotifyConnectClient(dealerClient, Player,
                     connectInterface,
                     SpotifyApiClient.EventsService,
                     SpotifyApiClient.MercuryClient,
@@ -167,6 +176,66 @@ namespace SpotifyLibV2
             return connectClient;
         }
 
+        public ISpotifyPlayer Player
+        {
+            get;
+            set;
+        }
+
+        public IAudioKey AudioKeyManager
+        {
+            get
+            {
+                if (_audioKey != null) return _audioKey;
+
+                var key = new AudioKeyManager(SpotifyApiClient.MercuryClient);
+                _audioKey = key;
+                return _audioKey;
+            }
+        }
+
+        private IChannelManager _channelManager;
+        public IChannelManager ChannelManager
+        {
+            get
+            {
+                if (_channelManager != null) return _channelManager;
+
+                var cn = new ChannelManager();
+                _channelManager = cn;
+                return _channelManager;
+            }
+        }
+
+        private ICdnManager _cdnManager;
+        public ICdnManager CdnManager
+        {
+            get
+            {
+                if (_cdnManager != null) return _cdnManager;
+
+                var cdn = new CdnManager(this);
+                _cdnManager = cdn;
+                return _cdnManager;
+            }
+        }
+
+        private IPlayableContentFeeder _contentFeeder;
+        public IPlayableContentFeeder ContentFeeder
+        {
+            get
+            {
+                if (_contentFeeder != null) return _contentFeeder;
+
+                var cc = new ContentFeeder(SpotifyApiClient.Tokens);
+                _contentFeeder = cc;
+                return _contentFeeder;
+            }
+        }
+
+        private ICacheManager _cacheManager;
+
+        public ICacheManager CacheManager { get; private set; }
         public ConcurrentDictionary<string, string> UserAttributes { get; }
 
         public void ApWelcomeReceived(APWelcome apWelcome)
@@ -196,9 +265,10 @@ namespace SpotifyLibV2
             ListenersHolder.SpotifySessionConcurrentDictionary.Remove(this);
         }
 
-        public static async Task<SpotifySession> CreateAsync(
+        public static async Task<SpotifySession> CreateAsync(ISpotifyPlayer player,
             IAuthenticator authenticator,
-            SpotifyConfiguration config)
+            SpotifyConfiguration config,
+            ICacheManager cacheManager = null)
         {
             if (authenticator == null)
                 throw new ArgumentNullException(nameof(authenticator), "Authenticator cannot be null");
@@ -210,7 +280,8 @@ namespace SpotifyLibV2
             await Task.WhenAll(tcpClientTask, loginCredentialsTask);
 
             var ses =
-                new SpotifySession(await loginCredentialsTask, config, await tcpClientTask);
+                new SpotifySession(player,
+                    await loginCredentialsTask, config, await tcpClientTask);
 
 
             ses.MetadataClient = new HttpClient(new AuthenticatedHttpClientHandler(() =>
@@ -220,6 +291,7 @@ namespace SpotifyLibV2
                     Uri(await ApResolver.GetClosestSpClient())
             };
             ses.MetadataClient.DefaultRequestHeaders.Add("Accept", "application/x-protobuf");
+            ses.CacheManager = cacheManager;
             return ses;
         }
 

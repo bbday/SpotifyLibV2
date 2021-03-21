@@ -227,7 +227,10 @@ namespace SpotifyLibV2.Connect
             return !bool.Parse(track.Metadata.GetMetadataOrDefault("is_explicit", "false"));
         }
 
-        public bool IsActive() => _player.IsActive;
+        public bool IsActive() =>
+             //_player.IsActive;
+             throw new NotImplementedException();
+
         private string SetContext(Context ctx)
         {
             var uri = ctx.Uri;
@@ -249,8 +252,8 @@ namespace SpotifyLibV2.Connect
 
             Pages = PagesLoader.From(_mercuryClient, uri);
             _tracksKeeper = new TracksKeeper.TracksKeeper(this, _state, Context);
-
-            _player.IsActive = true;
+            throw new NotImplementedException();
+            // _player.IsActive = true;
 
             return RenewSessionId();
         }
@@ -272,8 +275,11 @@ namespace SpotifyLibV2.Connect
 
             Pages = PagesLoader.From(_mercuryClient, uri);
             _tracksKeeper = new TracksKeeper.TracksKeeper(this, _state, Context);
+            
+            
+            throw new NotImplementedException();
 
-            _player.IsActive = true;
+            //_player.IsActive = true;
 
             return RenewSessionId();
         }
@@ -305,8 +311,11 @@ namespace SpotifyLibV2.Connect
         }
         public Task Updated()
         {
-            UpdateRestrictions(); 
-            return _connectState.UpdateState(PutStateReason.PlayerStateChanged, _player.Time, _state);
+            UpdateRestrictions();
+            throw new NotImplementedException();
+            return _connectState.UpdateState(PutStateReason.PlayerStateChanged,
+                0, 
+                _state);
         }
         public void SetState(bool playing, bool paused, bool buffering)
         {
