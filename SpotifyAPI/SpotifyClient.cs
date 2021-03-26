@@ -36,6 +36,7 @@ namespace SpotifyLibrary
         private IAudioKeyManager _audioKeyManager;
         private IPlayableContentFeeder _contentFeeder;
         private Task<IViewsClient> _viewsClient;
+        private Task<IMeClient> _meClient;
 
         public SpotifyClient()
         {
@@ -126,6 +127,7 @@ namespace SpotifyLibrary
             }
         }
 
+        public Task <IMeClient> MeClient => _meClient ??= BuildLoggableClient<IMeClient>();
         public Task<IViewsClient> ViewsClient => 
             _viewsClient ??= BuildLoggableClient<IViewsClient>();
 

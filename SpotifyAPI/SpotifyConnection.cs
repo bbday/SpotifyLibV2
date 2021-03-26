@@ -187,7 +187,9 @@ namespace SpotifyLibrary
             UserAttributes = new ConcurrentDictionary<string, string>();
             if (ApFailed == null)
             {
-                _receiver = new SpotifyReceiver(this, _mercuryClient, UserAttributes);
+                _receiver = new SpotifyReceiver(this, _mercuryClient, UserAttributes); 
+                established.Invoke(DateTime.UtcNow - _startTime);
+
             }
 
             return new SpotifyConnectionResult(authenticated.apWelcome, authenticated.failed, sw.Elapsed);
@@ -322,7 +324,6 @@ namespace SpotifyLibrary
                         throw;
                     }
 
-                    established.Invoke(DateTime.UtcNow - _startTime);
                     return (apWelcome, null);
                 }
                 case MercuryPacketType.AuthFailure:

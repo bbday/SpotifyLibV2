@@ -83,7 +83,7 @@ namespace SpotifyLibrary.Connect
                     Player.Pause();
                     break;
                 case Endpoint.Resume:
-                    Player.Resume(false, -1);
+                    Player.Resume( -1);
                     break;
                 case Endpoint.SeekTo:
                     var pos = command["value"].ToObject<int>();
@@ -203,7 +203,7 @@ namespace SpotifyLibrary.Connect
 
             //await _stateWrapper.Updated();
 
-             if (willPlay) Player.Resume(true, _stateWrapper.Position);
+             if (willPlay) Player.Resume(_stateWrapper.Position);
             else Player.Pause();
         }
 

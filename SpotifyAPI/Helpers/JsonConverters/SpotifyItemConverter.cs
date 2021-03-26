@@ -4,6 +4,7 @@ using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SpotifyLibrary.Enum;
+using SpotifyLibrary.Models.Ids;
 using SpotifyLibrary.Models.Response.Interfaces;
 using SpotifyLibrary.Models.Response.SpotifyItems;
 
@@ -29,6 +30,11 @@ namespace SpotifyLibrary.Helpers.JsonConverters
                 AudioType.Artist => new SimpleArtist(),
                 AudioType.Album => new SimpleAlbum(),
                 AudioType.Playlist => new SimplePlaylist(),
+                AudioType.Link => (new LinkId(jsonObject["uri"]?.ToString())).LinkType switch
+                {
+                    LinkType.CollectionTracks => new SimplePlaylist(true),
+                    _ => new EmptyItem()
+                },
                 _ => new EmptyItem()
             };
             serializer.Populate(jsonObject.CreateReader(), item);

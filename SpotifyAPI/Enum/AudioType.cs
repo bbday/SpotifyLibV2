@@ -8,6 +8,7 @@
         Album,
         Image,
         User,
-        Playlist
+        Playlist,
+        Link
     }
 }
