@@ -13,7 +13,9 @@ using Org.BouncyCastle.Utilities;
 using Spotify.Player.Proto;
 using Spotify.Player.Proto.Transfer;
 using SpotifyLibrary.Connect.Contexts;
+using SpotifyLibrary.Connect.Enums;
 using SpotifyLibrary.Connect.Exceptions;
+using SpotifyLibrary.Connect.Helpers;
 using SpotifyLibrary.Connect.Restrictions;
 using SpotifyLibrary.Connect.TracksKeepers;
 using SpotifyLibrary.Exceptions;
@@ -48,6 +50,32 @@ namespace SpotifyLibrary.Connect
         {
             this.requestState = requestState;
             PlayerState = InitState();
+            this.requestState.Player.StateChanged += async (state, metadata) =>
+            {
+                switch (state)
+                {
+                    case MediaPlaybackState.None:
+                        break;
+                    case MediaPlaybackState.Buffering:
+                        break;
+                    case MediaPlaybackState.FinishedLoading:
+                        break;
+                    case MediaPlaybackState.TrackStarted:
+                        SetState(true, false, false);
+                        await Updated();
+                        break;
+                    case MediaPlaybackState.TrackPaused:
+                        SetState(true, true, false);
+                        await Updated();
+                        break;
+                    case MediaPlaybackState.TrackPlayed:
+                        break;
+                    case MediaPlaybackState.NewTrack:
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(state), state, null);
+                }
+            };
         }
 
         public async Task<string> Transfer(TransferState cmd)
@@ -445,6 +473,46 @@ namespace SpotifyLibrary.Connect
         {
             var index = PlayerState.Index.Track;
             return _tracksKeeper == null || _tracksKeeper.Tracks.Count < index ? null : _tracksKeeper.Tracks[(int)index];
+        }
+
+        public async Task<string> Load(JObject obj)
+        {
+            var k = (PlayCommandHelper.GetPlayOrigin(obj) as JObject);
+            PlayerState.PlayOrigin = ProtoUtils.JsonToPlayOrigin(k!);
+            PlayerState.Options =
+                ProtoUtils.JsonToPlayerOptions((JObject)PlayCommandHelper.GetPlayerOptionsOverride(obj), PlayerState.Options);
+            var sessionId = SetContext(ProtoUtils.JsonToContext((JObject)PlayCommandHelper.GetContext(obj)));
+
+            var trackUid = PlayCommandHelper.GetSkipToUid(obj);
+            var trackUri = PlayCommandHelper.GetSkipToUri(obj);
+            var trackIndex = PlayCommandHelper.GetSkipToIndex(obj);
+
+            if (trackUri != null)
+            {
+                _tracksKeeper.InitializeFrom(list => list.FindIndex(z => z.Uri == trackUri), null, null);
+            }
+            else if (trackUid != null)
+            {
+                _tracksKeeper.InitializeFrom(list => list.FindIndex(z => z.Uid == trackUid), null, null);
+            }
+            else if (trackIndex != null)
+            {
+                _tracksKeeper.InitializeFrom(list =>
+                {
+                    if (trackIndex < list.Count) return (int)trackIndex;
+                    return -1;
+                }, null, null);
+            }
+            else
+            {
+                _tracksKeeper.InitializeStart();
+            }
+
+            var seekTo = PlayCommandHelper.GetSeekTo(obj);
+            if (seekTo != null) SetPosition((long)seekTo);
+            else SetPosition(0);
+            await LoadTransforming();
+            return sessionId;
         }
     }
 }

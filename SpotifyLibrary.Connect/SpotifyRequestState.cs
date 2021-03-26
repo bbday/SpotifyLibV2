@@ -76,10 +76,13 @@ namespace SpotifyLibrary.Connect
             switch (enumParsed)
             {
                 case Endpoint.Play:
+                    _ = HandlePlay(command);
                     break;
                 case Endpoint.Pause:
+                    Player.Pause();
                     break;
                 case Endpoint.Resume:
+                    Player.Resume(false, -1);
                     break;
                 case Endpoint.SeekTo:
                     break;
@@ -108,6 +111,32 @@ namespace SpotifyLibrary.Connect
             }
 
             return RequestResult.Success;
+        }
+
+        private async Task HandlePlay(JObject obj)
+        {
+            Debug.WriteLine($"Loading context (play), uri: {PlayCommandHelper.GetContextUri(obj)}");
+
+            try
+            {
+                var sessionId = await _stateWrapper.Load(obj);
+
+                var paused = PlayCommandHelper.IsInitiallyPaused(obj) ?? false;
+                await LoadSession(sessionId, !paused, PlayCommandHelper.WillSkipToSomething(obj));
+            }
+            catch (Exception ex)
+            {
+                switch (ex)
+                {
+                    case IOException:
+                    case MercuryException:
+                        Debug.WriteLine($"Failed loading context! {ex.ToString()}");
+                        break;
+                    case UnsupportedContextException unsup:
+                        Debug.WriteLine($"Cannot play local tracks!! {ex.ToString()}");
+                        break;
+                }
+            }
         }
 
         private async Task HandleTransfer(TransferState transferData)
