@@ -15,7 +15,7 @@ namespace SpotifyLibrary.ClientHandlers
 
         internal LoggingHandler(HttpClientHandler innerHandler,
             HttpMessageReceived messageReceived,
-            ITokensProvider tokensProvider)
+            ITokensProvider tokensProvider) : base(innerHandler)
         {
             _messageReceivedDelegate = messageReceived;
             _tokensProvider = tokensProvider;

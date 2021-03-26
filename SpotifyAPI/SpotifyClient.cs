@@ -5,7 +5,11 @@ using System.Net.Http;
 using System.Reflection;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Serialization;
 using Refit;
+using SpotifyLibrary.Api;
 using SpotifyLibrary.Attributes;
 using SpotifyLibrary.Audio;
 using SpotifyLibrary.Audio.KeyStuff;
@@ -15,6 +19,7 @@ using SpotifyLibrary.Configs;
 using SpotifyLibrary.Dealer;
 using SpotifyLibrary.Enum;
 using SpotifyLibrary.Helpers;
+using SpotifyLibrary.Helpers.JsonConverters;
 using SpotifyLibrary.Player;
 using SpotifyLibrary.Services;
 using SpotifyLibrary.Services.Mercury;
@@ -30,12 +35,12 @@ namespace SpotifyLibrary
         private ICdnManager _cdnManager;
         private IAudioKeyManager _audioKeyManager;
         private IPlayableContentFeeder _contentFeeder;
+        private Task<IViewsClient> _viewsClient;
 
         public SpotifyClient()
         {
-
         }
-        public SpotifyClient(SpotifyConfiguration config)
+        public SpotifyClient(SpotifyConfiguration config) : this()
         {
             Config = config;
         }
@@ -66,10 +71,18 @@ namespace SpotifyLibrary
             }
         }
         public ITokensProvider Tokens => _tokens ??= new TokensProvider(MercuryClient);
-        public IMercuryClient MercuryClient => _mercuryClient ??=
-            new MercuryClient(this,
-                (at, endedAt, reason) => { ConnectionDropped?.Invoke(this, (at, endedAt, reason)); },
-                timetaken => { Authenticated?.Invoke(this, timetaken); }, _audioKeyManager);
+
+        public IMercuryClient MercuryClient
+        {
+            get
+            {
+                _mercuryClient ??=
+                    new MercuryClient(this,
+                        (at, endedAt, reason) => { ConnectionDropped?.Invoke(this, (at, endedAt, reason)); },
+                        timetaken => { Authenticated?.Invoke(this, timetaken); }, _audioKeyManager);
+                return _mercuryClient;
+            }
+        }
 
         public bool IsConnected => MercuryClient?.Connection != null
                                    && MercuryClient.Connection.IsConnected;
@@ -113,6 +126,9 @@ namespace SpotifyLibrary
             }
         }
 
+        public Task<IViewsClient> ViewsClient => 
+            _viewsClient ??= BuildLoggableClient<IViewsClient>();
+
         public string CountryCode => MercuryClient.Connection.CountryCode;
         public ICacheManager CacheManager { get; set; }
 
@@ -152,7 +168,14 @@ namespace SpotifyLibrary
             //    .AddPolicyHandler(retryPolicy)
             //    .AddPolicyHandler(timeoutPolicy) // The order of adding is imporant!
             //    .AddHttpMessageHandler<AuthorizationMessageHandler>();
-            var refitClient = RestService.For<T>(client);
+
+            var refitSettings = new RefitSettings(new Refit.NewtonsoftJsonContentSerializer(new JsonSerializerSettings()
+            {
+                ContractResolver = new CustomResolver(),
+                Converters = {new StringEnumConverter()}
+            }));
+            var refitClient = RestService.For<T>(client, refitSettings);
+            
             return refitClient;
         }
 
@@ -167,8 +190,11 @@ namespace SpotifyLibrary
 
             if (attribute.Any(x => x is ResolvedSpClientEndpoint)) return await ApResolver.GetClosestSpClient();
 
+            if (attribute.Any(x => x is OpenUrlEndpoint)) return "https://api.spotify.com";
+
             throw new NotImplementedException("No BaseUrl or ResolvedEndpoint attribute was defined");
         }
+
     }
 
     public enum LoggedOutReason

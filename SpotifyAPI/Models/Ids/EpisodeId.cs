@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using SpotifyLibrary.Enum;
 using SpotifyLibrary.Models.Enums;
 
 namespace SpotifyLibrary.Models.Ids

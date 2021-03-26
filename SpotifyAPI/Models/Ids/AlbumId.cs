@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Base62;
+using SpotifyLibrary.Enum;
 using SpotifyLibrary.Helpers;
 using SpotifyLibrary.Models.Enums;
 

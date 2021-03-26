@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using Base62;
+using SpotifyLibrary.Enum;
 using SpotifyLibrary.Models.Enums;
 
 namespace SpotifyLibrary.Models.Ids

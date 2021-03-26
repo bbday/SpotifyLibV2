@@ -1,4 +1,4 @@
-﻿namespace SpotifyLibrary.Models.Enums
+﻿namespace SpotifyLibrary.Enum
 {
     public enum AudioType
     {
@@ -6,6 +6,8 @@
         Episode,
         Artist,
         Album,
-        Image
+        Image,
+        User,
+        Playlist
     }
 }

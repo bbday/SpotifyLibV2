@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using Connectstate;
 using Google.Protobuf;
 using JetBrains.Annotations;
+using SpotifyLibrary.Enum;
 using SpotifyLibrary.Helpers.Extensions;
 using SpotifyLibrary.Models.Enums;
 using SpotifyProto;
