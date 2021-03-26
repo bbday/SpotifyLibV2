@@ -13,7 +13,6 @@ using Nito.AsyncEx;
 using Org.BouncyCastle.Math;
 using Org.BouncyCastle.Utilities;
 using Spotify;
-using SpotifyLibrary.Audio.KeyStuff;
 using SpotifyLibrary.Configs;
 using SpotifyLibrary.Crypto;
 using SpotifyLibrary.Enum;
@@ -24,11 +23,11 @@ using SpotifyLibrary.Services.Mercury.Interfaces;
 
 namespace SpotifyLibrary
 {
-    internal class SpotifyConnectionResult
+    public class SpotifyConnectionResult
     {
-        [CanBeNull] internal readonly APLoginFailed ApFailed;
-        [CanBeNull] internal readonly APWelcome ApWelcome;
-        internal readonly TimeSpan Duration;
+        [CanBeNull] public readonly APLoginFailed ApFailed;
+        [CanBeNull] public readonly APWelcome ApWelcome;
+        public readonly TimeSpan Duration;
 
         public SpotifyConnectionResult(
             [CanBeNull] APWelcome apWelcome,
@@ -46,10 +45,8 @@ namespace SpotifyLibrary
         private readonly AsyncLock _authLock = new();
         private readonly AsyncAutoResetEvent _authLockEventWaitHandle = new(false);
 
-        private readonly SpotifyConfiguration _config;
-        private readonly DiffieHellman _diffieHellman;
+        private DiffieHellman _diffieHellman;
         private readonly IMercuryClient _mercuryClient;
-        private readonly IAudioKeyManager _audioKeyManager;
         private readonly AsyncLock _recvLock = new();
         private readonly AsyncLock _sendLock = new();
 
@@ -115,17 +112,15 @@ namespace SpotifyLibrary
         private volatile int recvNonce;
         private volatile int sendNonce;
 
-        internal SpotifyConnection(SpotifyConfiguration config,
+        private SpotifyClient _client;
+        internal SpotifyConnection(SpotifyClient client,
             MercuryConnectionDisconnected connectionDisconnected,
-            MercuryConnectionEstablished established, IMercuryClient mercuryClient, IAudioKeyManager audioKeyManager)
+            MercuryConnectionEstablished established, IMercuryClient mercuryClient)
         {
-            _config = config;
+            _client = client;
             this.connectionDisconnected = connectionDisconnected;
             this.established = established;
             _mercuryClient = mercuryClient;
-            _audioKeyManager = audioKeyManager;
-            _diffieHellman = new DiffieHellman();
-            ResetNonce();
         }
 
         private NetworkStream NetworkStream => _tcpClient?.GetStream();
@@ -136,9 +131,16 @@ namespace SpotifyLibrary
             {
                 using (_authLock.Lock())
                 {
-                    return ApWelcome != null
-                           && _tcpClient != null
-                           && _tcpClient.Connected;
+                    try
+                    {
+                        return ApWelcome != null
+                               && _tcpClient != null
+                               && _tcpClient.Connected;
+                    }
+                    catch (Exception)
+                    {
+                        return false;
+                    }
                 }
             }
         }
@@ -147,32 +149,50 @@ namespace SpotifyLibrary
 
         internal async Task<SpotifyConnectionResult> Connect()
         {
-            if (IsConnected) return new SpotifyConnectionResult(ApWelcome, ApFailed, TimeSpan.Zero);
-            using (_authLock.Lock())
+            if (IsConnected)
+                return new SpotifyConnectionResult(ApWelcome, ApFailed, TimeSpan.Zero);
+
+            _diffieHellman = new DiffieHellman();
+            ResetNonce();
+            ApWelcome = null;
+            ApFailed = null;
+
+            _startTime = DateTime.UtcNow;
+            var sw = Stopwatch.StartNew();
+            var tcpClientTask = await ApResolver.GetClosestAccessPoint();
+
+            _tcpClient?.Dispose();
+            _tcpClient = new TcpClient(tcpClientTask.host, tcpClientTask.port);
+
+            var connected = ConnectToSpotify(NewClientHello(), _diffieHellman);
+
+            if (!connected)
             {
-                _startTime = DateTime.UtcNow;
-                var sw = Stopwatch.StartNew();
-                var tcpClientTask = await ApResolver.GetClosestAccessPoint();
-                _tcpClient = new TcpClient(tcpClientTask.host, tcpClientTask.port);
-
-                var connected = ConnectToSpotify(NewClientHello(), _diffieHellman);
-                if (!connected)
-                {
-                    Debug.WriteLine("Couldn't connect... Retrying in 5 seconds");
-                    await Task.Delay(TimeSpan.FromSeconds(5));
-                    return await Reconnect();
-                }
-
-                var authenticated = Authenticate(await _config.Authenticator.Get(), _config);
-                ApWelcome = authenticated.apWelcome;
-                ApFailed = authenticated.failed;
-                _receiver?.Dispose();
-                UserAttributes = new ConcurrentDictionary<string, string>();
-                _receiver = new SpotifyReceiver(this, _mercuryClient, UserAttributes);
-
-                return new SpotifyConnectionResult(authenticated.apWelcome, authenticated.failed, sw.Elapsed);
+                Debug.WriteLine("Couldn't connect... Retrying in 5 seconds");
+                await Task.Delay(TimeSpan.FromSeconds(5));
+                return await Reconnect();
             }
+
+            var authenticated =
+                Authenticate(await _client.Config.Authenticator.Get(), _client.Config);
+            if(authenticated.apWelcome == null && authenticated.failed == null)
+            {
+                Debug.WriteLine("Couldn't connect... Retrying in 5 seconds");
+                await Task.Delay(TimeSpan.FromSeconds(5));
+                return await Reconnect();
+            }
+            ApWelcome = authenticated.apWelcome;
+            ApFailed = authenticated.failed;
+            _receiver?.Dispose();
+            UserAttributes = new ConcurrentDictionary<string, string>();
+            if (ApFailed == null)
+            {
+                _receiver = new SpotifyReceiver(this, _mercuryClient, UserAttributes);
+            }
+
+            return new SpotifyConnectionResult(authenticated.apWelcome, authenticated.failed, sw.Elapsed);
         }
+
         public string CountryCode => _receiver?.CountryCode;
         internal async Task<SpotifyConnectionResult> Reconnect()
         {
@@ -194,47 +214,57 @@ namespace SpotifyLibrary
 
         private bool ConnectToSpotify(ClientHello clientHello, DiffieHellman keys)
         {
-            var clientHelloBytes = clientHello.ToByteArray();
+            try
+            {
+                NetworkStream.ReadTimeout = (int) TimeSpan.FromSeconds(5)
+                    .TotalMilliseconds;
+                var clientHelloBytes = clientHello.ToByteArray();
 
-            var (accumulator, aPresponseBytes) = WriteAccumulator(clientHelloBytes);
+                var (accumulator, aPresponseBytes) = WriteAccumulator(clientHelloBytes);
 
-            if (accumulator == null) return false;
+                if (accumulator == null) return false;
 
-            using var data = ReadApResponseMessage(accumulator, aPresponseBytes, keys);
+                using var data = ReadApResponseMessage(accumulator, aPresponseBytes, keys);
 
-            if (NetworkStream.DataAvailable)
-                try
-                {
-                    var scrap = new byte[4];
-                    NetworkStream.ReadTimeout = 300;
-                    var read = NetworkStream.Read(scrap, 0, scrap.Length);
-                    if (read == scrap.Length)
+                if (NetworkStream.DataAvailable)
+                    try
                     {
-                        var length = (scrap[0] << 24) | (scrap[1] << 16) | (scrap[2] << 8) | (scrap[3] & 0xFF);
-                        var payload = new byte[length - 4];
-                        NetworkStream.ReadComplete(payload, 0, payload.Length);
-                        var failed = APResponseMessage.Parser.ParseFrom(payload)?.LoginFailed;
-                        throw new SpotifyAuthenticatedException(failed);
+                        var scrap = new byte[4];
+                        NetworkStream.ReadTimeout = 300;
+                        var read = NetworkStream.Read(scrap, 0, scrap.Length);
+                        if (read == scrap.Length)
+                        {
+                            var length = (scrap[0] << 24) | (scrap[1] << 16) | (scrap[2] << 8) | (scrap[3] & 0xFF);
+                            var payload = new byte[length - 4];
+                            NetworkStream.ReadComplete(payload, 0, payload.Length);
+                            var failed = APResponseMessage.Parser.ParseFrom(payload)?.LoginFailed;
+                            throw new SpotifyAuthenticatedException(failed);
+                        }
+
+                        if (read > 0) throw new Exception("Read unknown data!");
+                    }
+                    catch (Exception x)
+                    {
+                        // ignored
                     }
 
-                    if (read > 0) throw new Exception("Read unknown data!");
-                }
-                catch (Exception x)
-                {
-                    // ignored
-                }
-
-            NetworkStream.ReadTimeout = Timeout.Infinite;
+                NetworkStream.ReadTimeout = Timeout.Infinite;
 
 
-            _sendCipher = new Shannon();
-            _sendCipher.key(Arrays.CopyOfRange(data.ToArray(), 0x14, 0x34));
+                _sendCipher = new Shannon();
+                _sendCipher.key(Arrays.CopyOfRange(data.ToArray(), 0x14, 0x34));
 
-            _recvCipher = new Shannon();
-            _recvCipher.key(Arrays.CopyOfRange(data.ToArray(), 0x34, 0x54));
-            _authLockEventWaitHandle.Set();
-            accumulator.Dispose();
-            return true;
+                _recvCipher = new Shannon();
+                _recvCipher.key(Arrays.CopyOfRange(data.ToArray(), 0x34, 0x54));
+                _authLockEventWaitHandle.Set();
+                accumulator.Dispose();
+                return true;
+            }
+            catch(Exception x)
+            {
+                Debug.WriteLine(x.ToString());
+                return false;
+            }
         }
 
         private (APWelcome? apWelcome, APLoginFailed? failed) Authenticate(
@@ -249,7 +279,7 @@ namespace SpotifyLibrary
             SendUnchecked(MercuryPacketType.Login,
                 clientResponseEncrypted.ToByteArray(), CancellationToken.None);
 
-            var packet = Receive(CancellationToken.None);
+            var packet = Receive(CancellationToken.None, false);
             switch (packet.Cmd)
             {
                 case MercuryPacketType.APWelcome:
@@ -306,7 +336,7 @@ namespace SpotifyLibrary
             }
         }
 
-        public MercuryPacket Receive(CancellationToken cts)
+        public MercuryPacket Receive(CancellationToken cts, bool withReconnect)
         {
             try
             {
@@ -334,9 +364,13 @@ namespace SpotifyLibrary
                     return new MercuryPacket((MercuryPacketType) cmd, payloadBytes);
                 }
             }
-            catch (IOException)
+            catch (IOException e)
             {
-                _ = Reconnect();
+                if (withReconnect)
+                {
+                    _ = Reconnect();
+                }
+
                 return new MercuryPacket(MercuryPacketType.None, null);
             }
         }

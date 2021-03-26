@@ -79,12 +79,16 @@ namespace SpotifyLibrary.Connect
                     _ = HandlePlay(command);
                     break;
                 case Endpoint.Pause:
+                    _stateWrapper.SetPosition(_stateWrapper.Position);
                     Player.Pause();
                     break;
                 case Endpoint.Resume:
                     Player.Resume(false, -1);
                     break;
                 case Endpoint.SeekTo:
+                    var pos = command["value"].ToObject<int>();
+                    _stateWrapper.SetPosition(pos);
+                    Player.Seek(pos);
                     break;
                 case Endpoint.SkipNext:
                     break;

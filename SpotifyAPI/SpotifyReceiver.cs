@@ -46,7 +46,7 @@ namespace SpotifyLibrary
             Debug.WriteLine("Session.Receiver started");
             while (!_cts.IsCancellationRequested)
             {
-                var packet = _stream.Receive(_cts.Token);
+                var packet = _stream.Receive(_cts.Token, true);
                 if (!System.Enum.TryParse(packet.Cmd.ToString(), out MercuryPacketType cmd))
                 {
                     Debug.WriteLine(

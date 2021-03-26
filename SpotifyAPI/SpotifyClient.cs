@@ -9,6 +9,7 @@ using Refit;
 using SpotifyLibrary.Attributes;
 using SpotifyLibrary.Audio;
 using SpotifyLibrary.Audio.KeyStuff;
+using SpotifyLibrary.Authentication;
 using SpotifyLibrary.ClientHandlers;
 using SpotifyLibrary.Configs;
 using SpotifyLibrary.Dealer;
@@ -30,9 +31,19 @@ namespace SpotifyLibrary
         private IAudioKeyManager _audioKeyManager;
         private IPlayableContentFeeder _contentFeeder;
 
+        public SpotifyClient()
+        {
+
+        }
         public SpotifyClient(SpotifyConfiguration config)
         {
             Config = config;
+        }
+
+        public Task<SpotifyConnectionResult> Authenticate(SpotifyConfiguration config)
+        {
+            Config = config;
+            return MercuryClient.Connection.Connect();
         }
 
         public Task AttachClient(ISpotifyConnectClient connectClient,
@@ -57,14 +68,18 @@ namespace SpotifyLibrary
         public ITokensProvider Tokens => _tokens ??= new TokensProvider(MercuryClient);
         public IMercuryClient MercuryClient => _mercuryClient ??=
             new MercuryClient(this,
-                (at, endedAt, reason) => { MercuryConnectionDropped?.Invoke(this, (at, endedAt, reason)); },
-                timetaken => { MercuryConnectionEstablished?.Invoke(this, timetaken); }, _audioKeyManager);
+                (at, endedAt, reason) => { ConnectionDropped?.Invoke(this, (at, endedAt, reason)); },
+                timetaken => { Authenticated?.Invoke(this, timetaken); }, _audioKeyManager);
 
         public bool IsConnected => MercuryClient?.Connection != null
                                    && MercuryClient.Connection.IsConnected;
 
         public ConcurrentDictionary<string, string> UserAttributes => MercuryClient.UserAttributes;
-        public SpotifyConfiguration Config { get; }
+
+        public SpotifyConfiguration Config
+        {
+            get; private set;
+        }
         [CanBeNull] public ApiResponse LastResponse { get; private set; }
 
         public ICdnManager CdnManager
@@ -102,11 +117,12 @@ namespace SpotifyLibrary
         public ICacheManager CacheManager { get; set; }
 
         public event EventHandler<(DateTime StartedAt, DateTime EndedAt, ConnectionDroppedReason Reason)>
-            MercuryConnectionDropped;
+            ConnectionDropped;
 
         public event EventHandler<TimeSpan>
-            MercuryConnectionEstablished;
+            Authenticated;
 
+        public event EventHandler<LoggedOutReason> LoggedOut; 
         private async Task<T> BuildLoggableClient<T>()
         {
             var type = typeof(T);
@@ -153,5 +169,10 @@ namespace SpotifyLibrary
 
             throw new NotImplementedException("No BaseUrl or ResolvedEndpoint attribute was defined");
         }
+    }
+
+    public enum LoggedOutReason
+    {
+        Manual
     }
 }

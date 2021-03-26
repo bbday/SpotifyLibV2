@@ -12,6 +12,7 @@ namespace SpotifyLibrary.Player
         void Resume(bool fromStart, int withSeek);
         void Pause();
         void ChunkReceived(ISpotifyId id, byte[] chunk, int chunkIndex, int chunks, bool b);
+        void Seek(int position);
         TimeSpan Position { get; }
         PlayerStateChanged StateChanged { get; set; }
     }

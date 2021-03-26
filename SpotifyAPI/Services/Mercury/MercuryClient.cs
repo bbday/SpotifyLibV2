@@ -28,7 +28,6 @@ namespace SpotifyLibrary.Services.Mercury
         private readonly ConcurrentDictionary<long, ICallback> _callbacks =
             new();
 
-        private readonly SpotifyConfiguration _config;
         private readonly ManualResetEvent _connectionWaiter = new(false);
         private readonly MercuryConnectionDisconnected _disconnected;
         private readonly MercuryConnectionEstablished _established;
@@ -50,10 +49,10 @@ namespace SpotifyLibrary.Services.Mercury
             IAudioKeyManager audioKeyManager) : base("mercury")
         {
             Client = client;
-            _config = client.Config;
             _disconnected = disconnected;
             _established = established;
-            Connection = new SpotifyConnection(_config, disconnected, established, this, audioKeyManager);
+            Connection = new SpotifyConnection(client,
+                disconnected, established, this);
         }
 
         public SpotifyClient Client { get; }
