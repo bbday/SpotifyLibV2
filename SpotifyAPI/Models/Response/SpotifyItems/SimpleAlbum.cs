@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using Newtonsoft.Json;
 using SpotifyLibrary.Enum;
+using SpotifyLibrary.Models.Enums;
 using SpotifyLibrary.Models.Ids;
 using SpotifyLibrary.Models.Response.Interfaces;
 
@@ -11,6 +12,8 @@ namespace SpotifyLibrary.Models.Response.SpotifyItems
 {
     public class SimpleAlbum : ISpotifyItem
     {
+        public AudioService AudioService => AudioService.Spotify;
+
         private string _description;
         private AlbumId __id;
 

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using Newtonsoft.Json;
 using SpotifyLibrary.Enum;
+using SpotifyLibrary.Models.Enums;
 using SpotifyLibrary.Models.Ids;
 using SpotifyLibrary.Models.Response.Interfaces;
 
@@ -23,6 +24,8 @@ namespace SpotifyLibrary.Models.Response.SpotifyItems
         }
         public string Href { get; set; }
         public string Uri { get; set; }
+        public AudioService AudioService => AudioService.Spotify;
+
         [JsonIgnore]
         public IAudioId Id => __id ??= new ArtistId(Uri);
         [JsonProperty("id")]

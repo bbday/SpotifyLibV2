@@ -15,5 +15,9 @@ namespace SpotifyLibrary.Models.Response.Views
 
         [JsonProperty("content")]
         public Paging<T> Content { get; set; }
+
+        [JsonProperty("tag_line")]
+        public string TagLine { get; set; }
+        public string Name { get; set; }
     }
 }

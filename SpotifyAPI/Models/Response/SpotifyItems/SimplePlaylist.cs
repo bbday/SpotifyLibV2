@@ -4,6 +4,7 @@ using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using SpotifyLibrary.Enum;
+using SpotifyLibrary.Models.Enums;
 using SpotifyLibrary.Models.Ids;
 using SpotifyLibrary.Models.Response.Interfaces;
 
@@ -11,6 +12,8 @@ namespace SpotifyLibrary.Models.Response.SpotifyItems
 {
     public class SimplePlaylist : ISpotifyItem
     {
+        public AudioService AudioService => AudioService.Spotify;
+
         private IAudioId __id;
 
         [JsonConverter(typeof(StringEnumConverter))]

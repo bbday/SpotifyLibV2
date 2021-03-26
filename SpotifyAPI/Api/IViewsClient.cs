@@ -12,6 +12,8 @@ namespace SpotifyLibrary.Api
     public interface IViewsClient
     {
         [Get("/v1/views/personalized-recommendations")]
-        Task<ViewWrapper<ViewWrapper<ISpotifyItem>>> GetHomeView(HomeRequest request);
+        Task<ViewWrapper<ViewWrapper<IAudioItem>>> GetHomeView(HomeRequest request);
+        [Get("/v1/views/{id}")]
+        Task<ViewWrapper<IAudioItem>> GetCustomView(string id, HomeRequest request);
     }
 }

@@ -4,6 +4,7 @@ using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using SpotifyLibrary.Enum;
+using SpotifyLibrary.Models.Enums;
 using SpotifyLibrary.Models.Ids;
 using SpotifyLibrary.Models.Response.SpotifyItems;
 
@@ -11,6 +12,7 @@ namespace SpotifyLibrary.Models.Response.Interfaces
 {
     public interface IAudioItem
     {
+        AudioService AudioService { get; }
         IAudioId Id { get; }
         AudioType Type { get; }
         List<UrlImage> Images { get; }
