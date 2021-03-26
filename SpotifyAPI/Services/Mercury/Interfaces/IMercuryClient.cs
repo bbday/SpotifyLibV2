@@ -9,6 +9,7 @@ namespace SpotifyLibrary.Services.Mercury.Interfaces
 {
     public interface IMercuryClient
     {
+        SpotifyClient Client { get; }
         SpotifyConnection Connection { get; }
         ConcurrentDictionary<string, string> UserAttributes { get; }
         Task<T> SendAsync<T>([NotNull] JsonMercuryRequest<T> request) where T : class;

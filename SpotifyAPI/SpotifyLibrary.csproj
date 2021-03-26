@@ -21,13 +21,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\SpotifyLibrary.Protobufs\SpotifyLibrary.Models.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
     <Folder Include="Audio\KeyStuff\" />
     <Folder Include="Crypto\" />
     <Folder Include="Services\Api\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SpotifyLibrary.Protobufs\SpotifyLibrary.Models.csproj" />
   </ItemGroup>
 
 </Project>

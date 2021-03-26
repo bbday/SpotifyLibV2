@@ -23,7 +23,7 @@ namespace SpotifyLibrary.Connect
                 "hm://connect-state/v1/cluster");
         }
 
-        public Task OnMessage(string uri, Dictionary<string, string> headers, byte[] payload)
+        public async Task OnMessage(string uri, Dictionary<string, string> headers, byte[] payload)
         {
             if (uri.StartsWith("hm://track-playback/v1/command"))
             {
@@ -31,7 +31,7 @@ namespace SpotifyLibrary.Connect
             }
             else if (uri.StartsWith("hm://pusher/v1/connections/"))
             {
-                _spotifyConnectClient.UpdateConnectionId(headers["Spotify-Connection-Id"]);
+               await _spotifyConnectClient.UpdateConnectionId(headers["Spotify-Connection-Id"]);
             }
             else if (uri.StartsWith("hm://connect-state/v1/connect/volume"))
             {
@@ -46,8 +46,6 @@ namespace SpotifyLibrary.Connect
             {
                 Debug.WriteLine($"Message left unhandled! uri {uri}");
             }
-
-            return Task.CompletedTask;
         }
     }
 }

@@ -6,11 +6,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\SpotifyAPI\SpotifyLibrary\SpotifyLibrary.csproj" />
+    <Folder Include="Transitions\" />
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Transitions\" />
+    <ProjectReference Include="..\SpotifyAPI\SpotifyLibrary.csproj" />
   </ItemGroup>
 
 </Project>

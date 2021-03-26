@@ -59,9 +59,9 @@ namespace SpotifyLibrary.Connect
 
         internal void OnNewPlaybackWrapper(Cluster update)
         {
-            NewPlaybackWrapper?.Invoke(this, new PlaybackItemWrapper(update.PlayerState.Track.Uri));
+            NewPlaybackWrapper?.Invoke(this, new PlaybackItemWrapper(update.PlayerState?.Track?.Uri));
         }
 
-        public void UpdateConnectionId(string header) => _request.UpdateConnectionId(header);
+        public Task UpdateConnectionId(string header) => _request.UpdateConnectionId(header);
     }
 }

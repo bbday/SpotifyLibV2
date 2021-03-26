@@ -13,6 +13,7 @@ using Nito.AsyncEx;
 using Org.BouncyCastle.Math;
 using Org.BouncyCastle.Utilities;
 using Spotify;
+using SpotifyLibrary.Audio.KeyStuff;
 using SpotifyLibrary.Configs;
 using SpotifyLibrary.Crypto;
 using SpotifyLibrary.Enum;
@@ -48,7 +49,7 @@ namespace SpotifyLibrary
         private readonly SpotifyConfiguration _config;
         private readonly DiffieHellman _diffieHellman;
         private readonly IMercuryClient _mercuryClient;
-
+        private readonly IAudioKeyManager _audioKeyManager;
         private readonly AsyncLock _recvLock = new();
         private readonly AsyncLock _sendLock = new();
 
@@ -116,12 +117,13 @@ namespace SpotifyLibrary
 
         internal SpotifyConnection(SpotifyConfiguration config,
             MercuryConnectionDisconnected connectionDisconnected,
-            MercuryConnectionEstablished established, IMercuryClient mercuryClient)
+            MercuryConnectionEstablished established, IMercuryClient mercuryClient, IAudioKeyManager audioKeyManager)
         {
             _config = config;
             this.connectionDisconnected = connectionDisconnected;
             this.established = established;
             _mercuryClient = mercuryClient;
+            _audioKeyManager = audioKeyManager;
             _diffieHellman = new DiffieHellman();
             ResetNonce();
         }

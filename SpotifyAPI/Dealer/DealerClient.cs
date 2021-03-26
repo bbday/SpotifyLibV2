@@ -131,7 +131,8 @@ namespace SpotifyLibrary.Dealer
                 {
                     var listener = _reqListeners[midprefix];
                     interesting = true;
-                    var result = listener.OnRequest(mid, pid, sender, (JObject)command);
+                    var result =
+                        await Task.Run(() => listener.OnRequest(mid, pid, sender, (JObject)command));
                     await SendReply(key, result);
                     Debug.WriteLine("Handled request. key: {0}, result: {1}", key, result);
                 }

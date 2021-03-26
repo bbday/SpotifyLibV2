@@ -23,7 +23,7 @@ namespace SpotifyLibrary
 {
     public class SpotifyClient
     {
-        private readonly ISpotifyConnectClient _connectClient;
+        private ISpotifyConnectClient _connectClient;
         private IMercuryClient _mercuryClient;
         private ITokensProvider _tokens;
         private ICdnManager _cdnManager;
@@ -42,6 +42,7 @@ namespace SpotifyLibrary
             dealerClient.Attach();
             connectClient.Client = this;
             connectClient.DealerClient = dealerClient;
+            _connectClient = connectClient;
             return dealerClient.Connect();
         }
         public ISpotifyConnectClient ConnectClient
@@ -55,9 +56,9 @@ namespace SpotifyLibrary
         }
         public ITokensProvider Tokens => _tokens ??= new TokensProvider(MercuryClient);
         public IMercuryClient MercuryClient => _mercuryClient ??=
-            new MercuryClient(Config,
+            new MercuryClient(this,
                 (at, endedAt, reason) => { MercuryConnectionDropped?.Invoke(this, (at, endedAt, reason)); },
-                timetaken => { MercuryConnectionEstablished?.Invoke(this, timetaken); });
+                timetaken => { MercuryConnectionEstablished?.Invoke(this, timetaken); }, _audioKeyManager);
 
         public bool IsConnected => MercuryClient?.Connection != null
                                    && MercuryClient.Connection.IsConnected;

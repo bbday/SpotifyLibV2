@@ -166,12 +166,12 @@ namespace SpotifyLibrary.Connect
             _stateWrapper.SetPlaybackId(playbackId);
             //_events.SendEvent(new NewPlaybackIdEvent(_stateWrapper.SessionId, playbackId).BuildEvent());
 
-            _stateWrapper.SetState(true, !willPlay, true);
+            //_stateWrapper.SetState(true, !willPlay, true);
 
             //await _stateWrapper.Updated();
 
-            // if (willPlay) Player.Resume(true, _stateWrapper.Position);
-            //else Player.Pause();
+             if (willPlay) Player.Resume(true, _stateWrapper.Position);
+            else Player.Pause();
         }
 
         public PutStateRequest PutStateRequest { get; }
@@ -214,68 +214,39 @@ namespace SpotifyLibrary.Connect
             PutStateRequest.Device.PlayerState = _stateWrapper.PlayerState;
             return await PutConnectState(PutStateRequest);
         }
-        private async Task<byte[]> PutConnectState([NotNull] PutStateRequest reqAB)
+
+        private async Task<byte[]> PutConnectState([NotNull] IMessage incomingPutRequest)
         {
-            //_putclient ??= new HttpClient(new HttpClientHandler()
-            //{
-            //    AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
-            //})
-            //{
-            //    BaseAddress = new Uri((await ApResolver.GetClosestSpClient()))
-            //};
-
-            //_putclient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer",
-            //    (await Client.Tokens.GetToken("playlist-read")).AccessToken);
-
-            //var content = new StringContent(reqA.ToString(), Encoding.UTF8, "application/json");
-
-            //_putclient.DefaultRequestHeaders.Add("X-Spotify-Connection-Id", _connectionId);
-
-            //var res = await _putclient.PutAsync($"/connect-state/v1/devices/{Client.Config.DeviceId}", content);
-            //if (res.IsSuccessStatusCode)
-            //{
-            //    var dt = await res.Content.ReadAsByteArrayAsync();
-            //    Debug.WriteLine("Put new connect state:");
-            //    return dt;
-            //}
-            //else
-            //{
-            //    Debugger.Break();
-            //    return new byte[0];
-            //}
             try
             {
-                //var bt =
-                    //"EpMOCqABCAEQgIAEGg5saWJyZXNwb3QtamF2YSI2EAEoATABOAFAQEoNYXVkaW8vZXBpc29kZUoLYXVkaW8vdHJhY2tQAXgBgAEBmAEBoAEBuAEBMh1saWJyZXNwb3QtamF2YSAxLjUuNi1TTkFQU0hPVDgBSgUzLjIuNlIoMTRiZjcwYmJhYTIzZDM2ZmIyMGI5OGMwYjcwYTdjZWYzZDJiNjI1ZhLtDAiKofTjhi8SJHNwb3RpZnk6YWxidW06MUVLSFRuN2l6cTQwTWU5V3dnODdyUxouY29udGV4dDovL3Nwb3RpZnk6YWxidW06MUVLSFRuN2l6cTQwTWU5V3dnODdyUyIAKlUKBWFsYnVtEgYxLjEuNTQaKHNwb3RpZnk6YXBwOmFsYnVtOjFFS0hUbjdpenE0ME1lOVd3Zzg3clMqEXNwb3RpZnk6YXBwOmFsYnVtOgdjb25uZWN0MgIQBzpFCiRzcG90aWZ5OnRyYWNrOjdEdzZuQ2ZVS1lLdFM0QUw0UkRNQW4SFDJjNmQzZjdlNzczNzVmZmU1OGU5Mgdjb250ZXh0SQAAAAAAAPA/UABgAXABeAGCAQYIABAAGACKAQCSAQCaAUUKJHNwb3RpZnk6dHJhY2s6NHNlM2x6c25TUVJVZ0owVm9zUHd3RhIUNDUwYjhkYTMyZDZiNzJjNTJlMmEyB2NvbnRleHSaAUUKJHNwb3RpZnk6dHJhY2s6MTlBMFRiTTBRQm8ybVRSNGJweHNRNRIUMDk1ZGI2YWEwN2UwMTY1N2JkOWIyB2NvbnRleHSaAUUKJHNwb3RpZnk6dHJhY2s6NXRXZXBTVEYxZzNTdWhOQmFJaWtlUBIUMzM3MzlmMzZlYTgyODBkN2E0MGQyB2NvbnRleHSaAUUKJHNwb3RpZnk6dHJhY2s6NFprNEY3M1BPQ1cyR0tZbHBMcEVwRBIUZmU5MGM4NGI5NjAxZGI1Y2RiZjIyB2NvbnRleHSaAUUKJHNwb3RpZnk6dHJhY2s6NGI5WlIyNU8zZVB0ZEFrVFlpNUZlUxIUMWEzZTcyYmUyZTY2MjdlYmQ3ZmEyB2NvbnRleHSaAUUKJHNwb3RpZnk6dHJhY2s6MU5oTFNFRHhZUnFtRTNqZDJqd0lJThIUNWQxZmQzZTAwNDY4OWRkOTIzOTkyB2NvbnRleHSaAcoFCiRzcG90aWZ5OnRyYWNrOjBhcnprWmpMQUs4bFBJallJTEdMMTcSFDNlMjczODFiMTIyOTI4NDBmNDJkGjMKCmFydGlzdF91cmkSJXNwb3RpZnk6YXJ0aXN0OjFxbWE3WGh3Wm90Q0F1Y0w3TkhWTFkaQwoJaW1hZ2VfdXJsEjZzcG90aWZ5OmltYWdlOmFiNjc2MTZkMDAwMDFlMDJmYzc1ODliOWFjZjljY2NlOTM4Y2I3MzEaSgoQaW1hZ2VfeGxhcmdlX3VybBI2c3BvdGlmeTppbWFnZTphYjY3NjE2ZDAwMDBiMjczZmM3NTg5YjlhY2Y5Y2NjZTkzOGNiNzMxGjIKCmVudGl0eV91cmkSJHNwb3RpZnk6YWxidW06MUVLSFRuN2l6cTQwTWU5V3dnODdyUxoOCglpdGVyYXRpb24SATAaSQoPaW1hZ2VfbGFyZ2VfdXJsEjZzcG90aWZ5OmltYWdlOmFiNjc2MTZkMDAwMGIyNzNmYzc1ODliOWFjZjljY2NlOTM4Y2I3MzEaMQoJYWxidW1fdXJpEiRzcG90aWZ5OmFsYnVtOjFFS0hUbjdpenE0ME1lOVd3Zzg3clMaSQoPaW1hZ2Vfc21hbGxfdXJsEjZzcG90aWZ5OmltYWdlOmFiNjc2MTZkMDAwMDQ4NTFmYzc1ODliOWFjZjljY2NlOTM4Y2I3MzEaMwoLY29udGV4dF91cmkSJHNwb3RpZnk6YWxidW06MUVLSFRuN2l6cTQwTWU5V3dnODdyUxoaCgthbGJ1bV90aXRsZRILU09VTkRUUkFDS1MaEgoIZHVyYXRpb24SBjI3NzU5MzIHY29udGV4dEIkc3BvdGlmeTphbGJ1bToxRUtIVG43aXpxNDBNZTlXd2c4N3JTUiVzcG90aWZ5OmFydGlzdDoxcW1hN1hod1pvdENBdWNMN05IVkxZogFFCiRzcG90aWZ5OnRyYWNrOjNjOEphY0l0QlFlWGhndngwZ3d4U3ISFDM4ZjQ3OTAzNDUxOTFhYzI3NmFkMgdjb250ZXh0ogFFCiRzcG90aWZ5OnRyYWNrOjc1ajJJOVQyd3NFcE1TcnRxNjhncmESFGJiOWIyY2M3ZmNlMjNmOWZmMTk3Mgdjb250ZXh0qgEiChNjb250ZXh0X2Rlc2NyaXB0aW9uEgtTT1VORFRSQUNLU7oBFmd2QTNrTHFkYmM5QVlibE94NWQ4UkEYAiABKAQ6KDhmMjZkZGRiYzUzYWI4ZGY3MmJkMmI1OTY3MWM1MTYwNWI0ZWZlOTZA0aP04wZIjZ7044YvWABgjKH044Yv";
-                //var reqA = PutStateRequest.Parser.ParseFrom(ByteString.FromBase64(bt));
-                //reqA.Device.DeviceInfo = _deviceInfo;
 
-                var b = reqAB.ToByteArray();
-                _putclient ??= new HttpClient(new HttpClientHandler()
+                var asBytes = incomingPutRequest.ToByteArray();
+                if (_putclient == null)
                 {
-                    AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
-                })
-                {
-                    BaseAddress = new Uri((await ApResolver.GetClosestSpClient()))
-                };
-
-                _putclient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer",
-                    (await Client.Tokens.GetToken("playlist-read")).AccessToken);
+                    _putclient = new HttpClient(new HttpClientHandler()
+                    {
+                        AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
+                    })
+                    {
+                        BaseAddress = new Uri((await ApResolver.GetClosestSpClient()))
+                    };
+                    _putclient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer",
+                        (await Client.Tokens.GetToken("playlist-read")).AccessToken);
+                    _putclient.DefaultRequestHeaders.Add("X-Spotify-Connection-Id", _connectionId);
+                }
 
                 using var ms = new MemoryStream();
                 using (var gzip = new GZipStream(ms, CompressionMode.Compress, true))
                 {
-                    gzip.Write(b, 0, b.Length);
+                    gzip.Write(asBytes, 0, asBytes.Length);
                 }
                 ms.Position = 0;
                 var content = new StreamContent(ms);
                 content.Headers.ContentType = new MediaTypeHeaderValue("application/protobuf");
                 content.Headers.ContentEncoding.Add("gzip");
 
-                _putclient.DefaultRequestHeaders.Add("X-Spotify-Connection-Id", _connectionId);
 
                 var res = await _putclient.PutAsync($"/connect-state/v1/devices/{Client.Config.DeviceId}", content);
-
                 if (res.IsSuccessStatusCode)
                 {
                     var dt = await res.Content.ReadAsByteArrayAsync();
@@ -285,14 +256,17 @@ namespace SpotifyLibrary.Connect
                 else
                 {
                     Debugger.Break();
+                    //TODO: error handling
                     return new byte[0];
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine("Failed updating state.", ex); return new byte[0];
+                Debug.WriteLine("Failed updating state.", ex);
+                return new byte[0];
             }
         }
+
         private DeviceInfo InitializeDeviceInfo()
         {
             return new DeviceInfo

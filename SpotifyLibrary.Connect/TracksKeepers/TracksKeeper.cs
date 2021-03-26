@@ -28,21 +28,18 @@ namespace SpotifyLibrary.Connect.TracksKeepers
         private volatile bool cannotLoadMore = false;
         private volatile int shuffleKeepIndex = -1;
 
-        public readonly PlayerState State;
         private readonly AbsSpotifyContext _context;
         private readonly LocalStateWrapper _stateWrapper;
         internal TracksKeeper(LocalStateWrapper stateWrapper,
-            PlayerState state, 
             AbsSpotifyContext context)
         {
             _stateWrapper = stateWrapper;
-            State = state;
             _context = context;
         }
-        public bool IsPlayingFirst() => State.Index.Track == 0;
+        public bool IsPlayingFirst() => _stateWrapper.PlayerState.Index.Track == 0;
         public bool IsPlayingLast()
         {
-            if (cannotLoadMore && !Queue.Any()) return State.Index.Track == Tracks.Count;
+            if (cannotLoadMore && !Queue.Any()) return _stateWrapper.PlayerState.Index.Track == Tracks.Count;
             return false;
         }
         public void InitializeFrom(Func<List<ContextTrack>, int> getIndex,
@@ -104,16 +101,16 @@ namespace SpotifyLibrary.Connect.TracksKeepers
         {
             if (isPlayingQueue)
             {
-                var builder = State.Track;
+                var builder = _stateWrapper.PlayerState.Track;
                 ProtoUtils.EnrichTrack(builder, track);
             }
             else
             {
-                int index = (int)State.Index.Track;
+                int index = (int)_stateWrapper.PlayerState.Index.Track;
                 var current = Tracks[index];
                 ProtoUtils.EnrichTrack(current, track);
                 Tracks[index] = current;
-                State.Track = ProtoUtils.ConvertToProvidedTrack(current, State.ContextUri);
+                _stateWrapper.PlayerState.Track = ProtoUtils.ConvertToProvidedTrack(current, _stateWrapper.PlayerState.ContextUri);
             }
         }
         public void UpdateContext([NotNull] List<ContextPage> updatedPages)
@@ -129,8 +126,8 @@ namespace SpotifyLibrary.Connect.TracksKeepers
                 ProtoUtils.CopyOverMetadata(track, b);
                 Tracks[index] = b;
 
-                if (index != State.Index.Track) continue;
-                ProtoUtils.CopyOverMetadata(track, State.Track);
+                if (index != _stateWrapper.PlayerState.Index.Track) continue;
+                ProtoUtils.CopyOverMetadata(track, _stateWrapper.PlayerState.Track);
                 UpdateLikeDislike();
             }
         }
@@ -150,10 +147,10 @@ namespace SpotifyLibrary.Connect.TracksKeepers
                 throw new UnsupportedContextException("cannot play anything");
 
             var transformingShuffle = bool.Parse(
-                State.ContextMetadata.GetMetadataOrDefault("transforming.shuffle", "true"));
+                _stateWrapper.PlayerState.ContextMetadata.GetMetadataOrDefault("transforming.shuffle", "true"));
             if (_context.IsFinite() && _stateWrapper.IsShufflingContext
                                     && transformingShuffle) ShuffleEntirely();
-            else State.Options.ShufflingContext = false; // Must do this directly!
+            else _stateWrapper.PlayerState.Options.ShufflingContext = false; // Must do this directly!
 
             SetCurrentTrackIndex(0);
         }
@@ -168,7 +165,7 @@ namespace SpotifyLibrary.Connect.TracksKeepers
             if (Tracks.Count <= 1) return;
             if (isPlayingQueue) return;
 
-            var currentlyPlaying = PlayableId.FromUri(State.Track.Uri);
+            var currentlyPlaying = PlayableId.FromUri(_stateWrapper.PlayerState.Track.Uri);
 
             if (setTrue)
             {
@@ -247,9 +244,9 @@ namespace SpotifyLibrary.Connect.TracksKeepers
         public void UpdateTrackCount()
         {
             if (_context.IsFinite())
-                State.ContextMetadata.AddOrUpdate("track_count", (Tracks.Count + Queue.Count).ToString());
+                _stateWrapper.PlayerState.ContextMetadata.AddOrUpdate("track_count", (Tracks.Count + Queue.Count).ToString());
             else
-                State.ContextMetadata.Remove("track_count");
+                _stateWrapper.PlayerState.ContextMetadata.Remove("track_count");
         }
 
         public void CheckComplete()
@@ -258,7 +255,7 @@ namespace SpotifyLibrary.Connect.TracksKeepers
 
             if (_context.IsFinite())
             {
-                var totalTracks = int.Parse(State.ContextMetadata.GetMetadataOrDefault("track_count", "-1"));
+                var totalTracks = int.Parse(_stateWrapper.PlayerState.ContextMetadata.GetMetadataOrDefault("track_count", "-1"));
                 if (totalTracks == -1) cannotLoadMore = false;
                 else cannotLoadMore = totalTracks == Tracks.Count;
             }
@@ -269,7 +266,7 @@ namespace SpotifyLibrary.Connect.TracksKeepers
         public void SetCurrentTrackIndex(int index)
         {
             if (isPlayingQueue) throw new IllegalStateException();
-            State.Index = new ContextIndex
+            _stateWrapper.PlayerState.Index = new ContextIndex
             {
                 Track = (uint) index
             };
@@ -281,13 +278,13 @@ namespace SpotifyLibrary.Connect.TracksKeepers
             if (isPlayingQueue)
             {
                 var head = Queue.First;
-                State.Track = ProtoUtils.ConvertToProvidedTrack(head.Value, State.ContextUri);
+                _stateWrapper.PlayerState.Track = ProtoUtils.ConvertToProvidedTrack(head.Value, _stateWrapper.PlayerState.ContextUri);
                 Queue.Remove(head);
             }
             else
             {
-                var itemAtIndex = Tracks[(int) State.Index.Track];
-                State.Track = ProtoUtils.ConvertToProvidedTrack(itemAtIndex, State.ContextUri);
+                var itemAtIndex = Tracks[(int)_stateWrapper.PlayerState.Index.Track];
+                _stateWrapper.PlayerState.Track = ProtoUtils.ConvertToProvidedTrack(itemAtIndex, _stateWrapper.PlayerState.ContextUri);
             }
 
             UpdateLikeDislike();
@@ -297,40 +294,40 @@ namespace SpotifyLibrary.Connect.TracksKeepers
 
         public void UpdateLikeDislike()
         {
-            if (string.Equals(State.ContextMetadata.GetMetadataOrDefault("like-feedback-enabled", "0"), "1"))
+            if (string.Equals(_stateWrapper.PlayerState.ContextMetadata.GetMetadataOrDefault("like-feedback-enabled", "0"), "1"))
             {
-                State.ContextMetadata.AddOrUpdate("like-feedback-selected",
-                    State.Track.Metadata.GetMetadataOrDefault("like-feedback-selected", "0"));
+                _stateWrapper.PlayerState.ContextMetadata.AddOrUpdate("like-feedback-selected",
+                    _stateWrapper.PlayerState.Track.Metadata.GetMetadataOrDefault("like-feedback-selected", "0"));
             }
             else
             {
-                State.ContextMetadata.Remove("like-feedback-selected");
+                _stateWrapper.PlayerState.ContextMetadata.Remove("like-feedback-selected");
             }
 
-            if (string.Equals(State.ContextMetadata.GetMetadataOrDefault("dislike-feedback-enabled", "0"), "1"))
+            if (string.Equals(_stateWrapper.PlayerState.ContextMetadata.GetMetadataOrDefault("dislike-feedback-enabled", "0"), "1"))
             {
-                State.ContextMetadata.AddOrUpdate("dislike-feedback-selected",
-                    State.Track.Metadata.GetMetadataOrDefault("dislike-feedback-selected", "0"));
+                _stateWrapper.PlayerState.ContextMetadata.AddOrUpdate("dislike-feedback-selected",
+                    _stateWrapper.PlayerState.Track.Metadata.GetMetadataOrDefault("dislike-feedback-selected", "0"));
             }
             else
             {
-                State.ContextMetadata.Remove("dislike-feedback-selected");
+                _stateWrapper.PlayerState.ContextMetadata.Remove("dislike-feedback-selected");
             }
         }
 
         public void UpdateTrackDuration()
         {
-            var current = State.Track;
-            State.Duration = current.Metadata.ContainsKey("duration")
+            var current = _stateWrapper.PlayerState.Track;
+            _stateWrapper.PlayerState.Duration = current.Metadata.ContainsKey("duration")
                 ? long.Parse(current.Metadata["duration"])
                 : 0L;
         }
 
         public void UpdateTrackDuration(int duration)
         {
-            State.Duration = duration;
-            State.Track.Metadata["duration"] = duration.ToString();
-            UpdateMetadataFor((int)State.Index.Track, "duration", duration.ToString());
+            _stateWrapper.PlayerState.Duration = duration;
+            _stateWrapper.PlayerState.Track.Metadata["duration"] = duration.ToString();
+            UpdateMetadataFor((int)_stateWrapper.PlayerState.Index.Track, "duration", duration.ToString());
         }
         public void UpdateMetadataFor(int index, [NotNull] string key, [NotNull] string value)
         {
@@ -341,19 +338,19 @@ namespace SpotifyLibrary.Connect.TracksKeepers
 
         public void UpdatePrevNextTracks()
         {
-            var index = (int)State.Index.Track;
+            var index = (int)_stateWrapper.PlayerState.Index.Track;
 
-            State.PrevTracks.Clear();
+            _stateWrapper.PlayerState.PrevTracks.Clear();
             for (int i = Math.Max(0, index - MAX_PREV_TRACKS); i < index; i++)
             {
-                State.PrevTracks.Add(ProtoUtils.ConvertToProvidedTrack(Tracks[i], State.ContextUri));
+                _stateWrapper.PlayerState.PrevTracks.Add(ProtoUtils.ConvertToProvidedTrack(Tracks[i], _stateWrapper.PlayerState.ContextUri));
             }
 
 
-            State.NextTracks.Clear();
+            _stateWrapper.PlayerState.NextTracks.Clear();
             for (int i = index + 1; i < Math.Min(Tracks.Count, index + 1 + MAX_PREV_TRACKS); i++)
             {
-                State.NextTracks.Add(ProtoUtils.ConvertToProvidedTrack(Tracks[i], State.ContextUri));
+                _stateWrapper.PlayerState.NextTracks.Add(ProtoUtils.ConvertToProvidedTrack(Tracks[i], _stateWrapper.PlayerState.ContextUri));
             }
         }
     }

@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Google.Protobuf;
 using Spotify;
+using SpotifyLibrary.Audio.KeyStuff;
 using SpotifyLibrary.Callbacks;
 using SpotifyLibrary.Configs;
 using SpotifyLibrary.Enum;
@@ -43,15 +44,19 @@ namespace SpotifyLibrary.Services.Mercury
 
         private volatile int _seqHolder;
 
-        internal MercuryClient(SpotifyConfiguration config,
+        internal MercuryClient(SpotifyClient client,
             MercuryConnectionDisconnected disconnected,
-            MercuryConnectionEstablished established) : base("mercury")
+            MercuryConnectionEstablished established,
+            IAudioKeyManager audioKeyManager) : base("mercury")
         {
-            _config = config;
+            Client = client;
+            _config = client.Config;
             _disconnected = disconnected;
             _established = established;
-            Connection = new SpotifyConnection(config, disconnected, established, this);
+            Connection = new SpotifyConnection(_config, disconnected, established, this, audioKeyManager);
         }
+
+        public SpotifyClient Client { get; }
         public SpotifyConnection Connection { get; }
         public ConcurrentDictionary<string, string> UserAttributes => Connection.UserAttributes;
 

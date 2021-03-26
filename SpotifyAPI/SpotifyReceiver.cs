@@ -5,6 +5,7 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Xml;
+using SpotifyLibrary.Audio.KeyStuff;
 using SpotifyLibrary.Enum;
 using SpotifyLibrary.Helpers.Extensions;
 using SpotifyLibrary.Services.Mercury.Interfaces;
@@ -22,8 +23,7 @@ namespace SpotifyLibrary
         internal SpotifyReceiver(
             SpotifyConnection stream,
             IMercuryClient mercuryClient,
-            ConcurrentDictionary<string, string> userAttributes,
-            CancellationToken? ctx = null)
+            ConcurrentDictionary<string, string> userAttributes, CancellationToken? ctx = null)
         {
             _userAttributes = userAttributes;
             _stream = stream;
@@ -99,6 +99,10 @@ namespace SpotifyLibrary
                     case MercuryPacketType.MercuryUnsub:
                     case MercuryPacketType.MercuryEvent:
                         _mercuryClient.Dispatch(packet);
+                        break;
+                    case MercuryPacketType.AesKey:
+                    case MercuryPacketType.AesKeyError:
+                        _mercuryClient.Client.AudioKeyManager.Dispatch(packet);
                         break;
                     case MercuryPacketType.ProductInfo:
                         try
