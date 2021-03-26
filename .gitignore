@@ -16,6 +16,17 @@
 # Mono auto generated files
 mono_crash.*
 
+
+SpotifyLibrary.ConsoleTest/
+SpotifyUWPV4/
+SpotifyUWPV4.Core/
+SpotifyAPI/bin
+SpotifyAPI/obj
+SpotifyLibrary.Protobufs/bin
+SpotifyLibrary.Protobufs/obj
+SpotifyLibrary.Connect/bin
+SpotifyLibrary.Connect/obj
+
 # Build results
 [Dd]ebug/
 [Dd]ebugPublic/
