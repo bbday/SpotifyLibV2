@@ -22,6 +22,7 @@ using SpotifyLibrary.Connect.Player;
 using SpotifyLibrary.Connect.PlayerSession;
 using SpotifyLibrary.Connect.Transitions;
 using SpotifyLibrary.Dealer;
+using SpotifyLibrary.Enum;
 using SpotifyLibrary.Exceptions;
 using SpotifyLibrary.Helpers;
 using SpotifyLibrary.Models;
@@ -59,7 +60,7 @@ namespace SpotifyLibrary.Connect
                     DeviceInfo = _deviceInfo
                 }
             };
-            _stateWrapper = new LocalStateWrapper(this);
+            _stateWrapper = new LocalStateWrapper(this, Client.MercuryClient);
             dealerClient.AddRequestListener(this,
                 "hm://connect-state/v1/");
         }
@@ -76,14 +77,17 @@ namespace SpotifyLibrary.Connect
             switch (enumParsed)
             {
                 case Endpoint.Play:
-                    _ = HandlePlay(command);
+                    _ = HandlePlay(command); 
+                    ConnectClient.OnPlaybackStateChanged(this, MediaPlaybackState.TrackStarted);
                     break;
                 case Endpoint.Pause:
                     _stateWrapper.SetPosition(_stateWrapper.Position);
                     Player.Pause();
+                    ConnectClient.OnPlaybackStateChanged(this, MediaPlaybackState.TrackPaused);
                     break;
                 case Endpoint.Resume:
                     Player.Resume( -1);
+                    ConnectClient.OnPlaybackStateChanged(this, MediaPlaybackState.TrackStarted);
                     break;
                 case Endpoint.SeekTo:
                     var pos = command["value"].ToObject<int>();
@@ -95,10 +99,33 @@ namespace SpotifyLibrary.Connect
                 case Endpoint.SkipPrev:
                     break;
                 case Endpoint.SetShufflingContext:
+                    var shuffling = command["value"].ToObject<bool>();
+                    _stateWrapper.SetShufflingContext(shuffling);
+                    _stateWrapper.Updated();
+
+                    ConnectClient.OnShuffleStatecHanged(this, shuffling);
                     break;
                 case Endpoint.SetRepeatingContext:
+                    var isRepeatingContext = command["value"].ToObject<bool>();
+                    _stateWrapper.SetRepeatingContext(isRepeatingContext);
+                    _stateWrapper.Updated();
+                    if (isRepeatingContext)
+                    {
+                        ConnectClient.OnRepeatStateChanged(this, RepeatState.Context);
+                    }
+                    else
+                    {
+                        ConnectClient.OnRepeatStateChanged(this, RepeatState.Off);
+                    }
                     break;
                 case Endpoint.SetRepeatingTrack:
+                    var isRepeatingTrack = command["value"].ToObject<bool>();
+                    _stateWrapper.SetRepeatingTrack(isRepeatingTrack);
+                    _stateWrapper.Updated();
+                    if (isRepeatingTrack)
+                    {
+                        ConnectClient.OnRepeatStateChanged(this, RepeatState.Track);
+                    }
                     break;
                 case Endpoint.UpdateContext:
                     break;
@@ -127,6 +154,7 @@ namespace SpotifyLibrary.Connect
 
                 var paused = PlayCommandHelper.IsInitiallyPaused(obj) ?? false;
                 await LoadSession(sessionId, !paused, PlayCommandHelper.WillSkipToSomething(obj));
+                ConnectClient.OnNewPlaybackWrapper(this, _stateWrapper.PlayerState);
             }
             catch (Exception ex)
             {
@@ -152,6 +180,7 @@ namespace SpotifyLibrary.Connect
                     _stateWrapper.Transfer(transferData); 
 
                 await LoadSession(sessionId, !transferData.Playback.IsPaused, true);
+                ConnectClient.OnNewPlaybackWrapper(this, _stateWrapper.PlayerState);
             }
             catch (Exception x)
             {
@@ -231,7 +260,7 @@ namespace SpotifyLibrary.Connect
             var tryGet =
                 Connectstate.Cluster.Parser.ParseFrom(data);
 
-            ConnectClient.OnNewPlaybackWrapper(tryGet);
+            ConnectClient.OnNewPlaybackWrapper(this, tryGet.PlayerState);
         }
 
         internal async Task<byte[]> UpdateState(PutStateReason reason, int playerTime)

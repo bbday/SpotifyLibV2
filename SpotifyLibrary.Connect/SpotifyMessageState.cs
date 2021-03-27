@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Connectstate;
 using SpotifyLibrary.Dealer;
+using SpotifyLibrary.Enum;
 
 namespace SpotifyLibrary.Connect
 {
@@ -12,6 +13,9 @@ namespace SpotifyLibrary.Connect
     {
         private readonly DealerClient _dealerClient;
         private readonly SpotifyConnectClient _spotifyConnectClient;
+        private ClusterUpdate _previousCluster;
+        private RepeatState? _previousRepeatState;
+
         internal SpotifyMessageState(DealerClient dealerClient,
             SpotifyConnectClient onNewCluster)
         {
@@ -40,11 +44,67 @@ namespace SpotifyLibrary.Connect
             else if (uri.StartsWith("hm://connect-state/v1/cluster"))
             {
                 var update = ClusterUpdate.Parser.ParseFrom(payload);
-                _spotifyConnectClient.OnNewPlaybackWrapper(update.Cluster);
+                // _spotifyConnectClient.OnNewPlaybackWrapper(this, update.Cluster);
+                if (update.Cluster?.PlayerState != null)
+                {
+                    if (update.Cluster.PlayerState?.Track?.Uri != null)
+                    {
+                        if (_previousCluster?.Cluster?.PlayerState?.Track?.Uri
+                            != update.Cluster.PlayerState.Track.Uri)
+                        {
+                            _spotifyConnectClient.OnNewPlaybackWrapper(this, update.Cluster.PlayerState);
+                        }
+                    }
+                    if (_previousCluster?.Cluster?.PlayerState?.Options == null)
+                    {
+                        _spotifyConnectClient.OnShuffleStatecHanged(this, update.Cluster.PlayerState.Options.ShufflingContext);
+                        _previousRepeatState = ParseRepeatState(update.Cluster);
+                        _spotifyConnectClient.OnRepeatStateChanged(this, _previousRepeatState.Value);
+                    }
+                    else
+                    {
+                        var newRepeatState = ParseRepeatState(update.Cluster);
+                        if (_previousRepeatState != newRepeatState)
+                        {
+                            _spotifyConnectClient.OnRepeatStateChanged(this, newRepeatState);
+                            _previousRepeatState = newRepeatState;
+                        }
+
+                        if (_previousCluster.Cluster.PlayerState.Options.ShufflingContext !=
+                            update.Cluster.PlayerState.Options.ShufflingContext)
+                        {
+                            _spotifyConnectClient.OnShuffleStatecHanged(this, update.Cluster.PlayerState.Options.ShufflingContext);
+                        }
+                    }
+                }
+
+
+                _previousCluster = update;
             }
             else
             {
                 Debug.WriteLine($"Message left unhandled! uri {uri}");
+            }
+        }
+
+        private static RepeatState ParseRepeatState(Cluster cluster)
+        {
+            var repeatingTrack = cluster.PlayerState.Options.RepeatingTrack;
+            var repeatingContext = cluster.PlayerState.Options.RepeatingContext;
+            if (repeatingContext && !repeatingTrack)
+            {
+                return RepeatState.Context;
+            }
+            else
+            {
+                if (repeatingTrack)
+                {
+                    return RepeatState.Track;
+                }
+                else
+                {
+                    return RepeatState.Off;
+                }
             }
         }
     }

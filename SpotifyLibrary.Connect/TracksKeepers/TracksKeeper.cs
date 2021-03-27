@@ -12,6 +12,7 @@ using SpotifyLibrary.Connect.Exceptions;
 using SpotifyLibrary.Exceptions;
 using SpotifyLibrary.Helpers;
 using SpotifyLibrary.Helpers.Extensions;
+using SpotifyLibrary.Services.Mercury.Interfaces;
 using UnsupportedContextException = SpotifyLibrary.Connect.Contexts.UnsupportedContextException;
 
 namespace SpotifyLibrary.Connect.TracksKeepers
@@ -31,10 +32,12 @@ namespace SpotifyLibrary.Connect.TracksKeepers
         private readonly AbsSpotifyContext _context;
         private readonly LocalStateWrapper _stateWrapper;
         internal TracksKeeper(LocalStateWrapper stateWrapper,
-            AbsSpotifyContext context)
+            AbsSpotifyContext context,
+            IMercuryClient mercury)
         {
             _stateWrapper = stateWrapper;
             _context = context;
+            Mercury = mercury;
         }
         public bool IsPlayingFirst() => _stateWrapper.PlayerState.Index.Track == 0;
         public bool IsPlayingLast()
@@ -205,13 +208,16 @@ namespace SpotifyLibrary.Connect.TracksKeepers
                 {
                     Tracks.Clear();
 
-                    //TODO: We need to create new pages
+                    _stateWrapper.Pages = PagesLoader.From(Mercury, _context.Uri);
+                    LoadAllTracks();
 
                     SetCurrentTrackIndex(Tracks.FindIndex(z => z.Uri == currentlyPlaying.Uri));
                     Debug.WriteLine($"Unshuffled fisher yates by reloading context");
                 }
             }
         }
+
+        public IMercuryClient Mercury { get; }
 
         public bool LoadAllTracks()
         {
@@ -220,7 +226,10 @@ namespace SpotifyLibrary.Connect.TracksKeepers
             {
                 while (true)
                 {
-                    //paging
+                    if (_stateWrapper.Pages.NextPage()) 
+                        Tracks.AddRange(
+                        _stateWrapper.Pages.CurrentPage());
+                    else break;
                 }
             }
             catch (Exception x)

@@ -45,9 +45,11 @@ namespace SpotifyLibrary.Connect
         public readonly PlayerState PlayerState;
         private readonly SpotifyRequestState requestState;
         private HttpClient _cuePointsClient;
-
-        internal LocalStateWrapper(SpotifyRequestState requestState)
+        private readonly IMercuryClient _mercury;
+        internal LocalStateWrapper(SpotifyRequestState requestState,
+            IMercuryClient mercury)
         {
+            _mercury = mercury;
             this.requestState = requestState;
             PlayerState = InitState();
             this.requestState.Player.StateChanged += async (state, metadata) =>
@@ -139,7 +141,7 @@ namespace SpotifyLibrary.Connect
             ProtoUtils.CopyOverMetadata(ctx, PlayerState);
 
             Pages = PagesLoader.From(requestState.ConnectClient.Client.MercuryClient, ctx);
-            _tracksKeeper = new TracksKeeper(this, Context);
+            _tracksKeeper = new TracksKeeper(this, Context, _mercury);
 
 
             requestState.SetIsActive(true);
@@ -227,7 +229,7 @@ namespace SpotifyLibrary.Connect
             : PlayableId.From(PlayerState.Track);
 
         public int Position => (int)GetPosition();
-        public PagesLoader Pages { get; private set; }
+        public PagesLoader Pages { get; internal set; }
 
         public bool IsPaused => PlayerState.IsPlaying && PlayerState.IsPaused;
         public bool IsShufflingContext => PlayerState.Options.ShufflingContext;

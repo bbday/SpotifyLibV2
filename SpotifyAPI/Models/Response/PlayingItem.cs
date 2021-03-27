@@ -1,4 +1,6 @@
-﻿using SpotifyLibrary.Enum;
+﻿using System;
+using System.Collections.Generic;
+using SpotifyLibrary.Enum;
 using SpotifyLibrary.Models.Ids;
 using SpotifyLibrary.Models.Response.Interfaces;
 using SpotifyLibrary.Services.Mercury;
@@ -12,7 +14,7 @@ namespace SpotifyLibrary.Models.Response
             bool isShuffle,
             bool isPaused,
             IRemoteDevice activeDevice,
-            IAudioId context, long timeStamp, long positionAsOfTimestamp)
+            IAudioId context, long timeStamp, long positionAsOfTimestamp, List<Descriptions> descriptions, TimeSpan duration)
         {
             AudioItem = audioItem;
             RepeatState = repeatState;
@@ -23,13 +25,16 @@ namespace SpotifyLibrary.Models.Response
 
             _timeStamp = timeStamp;
             _positionAsOfTimestamp = positionAsOfTimestamp;
+            Descriptions = descriptions;
+            Duration = duration;
         }
-
-        public IAudioItem AudioItem { get; }
-        public IAudioId Context { get; }
-        public RepeatState RepeatState { get; }
-        public bool IsShuffle { get; }
-        public bool IsPaused { get; }
+        public TimeSpan Duration { get; internal set; }
+        public List<Descriptions> Descriptions { get; internal set; }
+        public IAudioItem AudioItem { get; internal set; }
+        public IAudioId Context { get; internal set; }
+        public RepeatState RepeatState { get; set; }
+        public bool IsShuffle { get; set; }
+        public bool IsPaused { get; set; }
         public long TimeStamp
         {
             get
@@ -43,5 +48,17 @@ namespace SpotifyLibrary.Models.Response
 
         private long _timeStamp { get; }
         private long _positionAsOfTimestamp { get; }
+    }
+
+    public class Descriptions
+    {
+        public Descriptions(string name, IAudioId id)
+        {
+            Name = name;
+            Id = id;
+        }
+
+        public string Name { get; }
+        public IAudioId Id { get; }
     }
 }
