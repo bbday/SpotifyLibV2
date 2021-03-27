@@ -20,6 +20,7 @@ using SpotifyLibrary.Dealer;
 using SpotifyLibrary.Enum;
 using SpotifyLibrary.Helpers;
 using SpotifyLibrary.Helpers.JsonConverters;
+using SpotifyLibrary.Models;
 using SpotifyLibrary.Player;
 using SpotifyLibrary.Services;
 using SpotifyLibrary.Services.Mercury;
@@ -37,14 +38,12 @@ namespace SpotifyLibrary
         private IPlayableContentFeeder _contentFeeder;
         private Task<IViewsClient> _viewsClient;
         private Task<IMeClient> _meClient;
+        private Task<ITracksClient> _tracksClient;
 
         public SpotifyClient()
         {
         }
-        public SpotifyClient(SpotifyConfiguration config) : this()
-        {
-            Config = config;
-        }
+
 
         public Task<SpotifyConnectionResult> Authenticate(SpotifyConfiguration config)
         {
@@ -79,8 +78,12 @@ namespace SpotifyLibrary
             {
                 _mercuryClient ??=
                     new MercuryClient(this,
-                        (at, endedAt, reason) => { ConnectionDropped?.Invoke(this, (at, endedAt, reason)); },
-                        timetaken => { Authenticated?.Invoke(this, timetaken); }, _audioKeyManager);
+                        (at, endedAt, reason) => { ConnectionDropped?.Invoke(this, (at, endedAt, reason)); }, async timetaken =>
+                        {
+                            var user = await MeClient;
+                            var curUser = await user.GetCurrentUser();
+                            Authenticated?.Invoke(this, (timetaken, curUser));
+                        }, _audioKeyManager);
                 return _mercuryClient;
             }
         }
@@ -127,6 +130,7 @@ namespace SpotifyLibrary
             }
         }
 
+        public Task<ITracksClient> TracksClient => _tracksClient ??= BuildLoggableClient<ITracksClient>();
         public Task <IMeClient> MeClient => _meClient ??= BuildLoggableClient<IMeClient>();
         public Task<IViewsClient> ViewsClient => 
             _viewsClient ??= BuildLoggableClient<IViewsClient>();
@@ -137,7 +141,7 @@ namespace SpotifyLibrary
         public event EventHandler<(DateTime StartedAt, DateTime EndedAt, ConnectionDroppedReason Reason)>
             ConnectionDropped;
 
-        public event EventHandler<TimeSpan>
+        public event EventHandler<(TimeSpan TimeTook, IAudioUser User)>
             Authenticated;
 
         public event EventHandler<LoggedOutReason> LoggedOut; 

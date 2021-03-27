@@ -248,7 +248,7 @@ namespace SpotifyLibrary.Connect
             return await PutConnectState(PutStateRequest);
         }
 
-        private async Task<byte[]> PutConnectState([NotNull] IMessage incomingPutRequest)
+        private async Task<byte[]> PutConnectState([NotNull] PutStateRequest incomingPutRequest)
         {
             try
             {
@@ -256,9 +256,9 @@ namespace SpotifyLibrary.Connect
                 var asBytes = incomingPutRequest.ToByteArray();
                 if (_putclient == null)
                 {
-                    _putclient = new HttpClient(new HttpClientHandler()
+                    _putclient = new HttpClient(new HttpClientHandler
                     {
-                        AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
+                        AutomaticDecompression = DecompressionMethods.GZip
                     })
                     {
                         BaseAddress = new Uri((await ApResolver.GetClosestSpClient()))

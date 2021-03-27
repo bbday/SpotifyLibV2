@@ -19,7 +19,7 @@ namespace SpotifyLibrary.Models.Response
         public string DisplayName { get; set; }
         public string Email { get; set; }
         [JsonProperty("explicit_content")]
-        public bool ExplicitContent { get; set; }
+        public ExplicitContent ExplicitContent { get; set; }
         public Followers Folowers { get; set; }
         [JsonIgnore] public IAudioId Id => __id ??= new UserId(_id);
         public List<UrlImage> Images { get; set; }
@@ -27,5 +27,13 @@ namespace SpotifyLibrary.Models.Response
         public string Uri { get; set; }
         [JsonProperty("id")]
         public string _id { get; set; }
+    }
+
+    public class ExplicitContent
+    {
+        [JsonProperty("filter_enabled")]
+        public bool FilterEnabled { get; set; }
+        [JsonProperty("filter_locked")]
+        public bool FilterLocked { get; set; }
     }
 }

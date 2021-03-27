@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Threading;
 using Connectstate;
 using SpotifyLibrary.Dealer;
 using SpotifyLibrary.Models;
+using SpotifyLibrary.Models.Response;
 using SpotifyLibrary.Player;
 
 namespace SpotifyLibrary
@@ -11,7 +13,9 @@ namespace SpotifyLibrary
         DealerClient DealerClient { get; set; }
         SpotifyClient Client { get; set; }
 
-        event EventHandler<PlaybackItemWrapper> NewPlaybackWrapper;
+        event EventHandler<PlayingItem> NewPlaybackWrapper;
         ISpotifyPlayer Player { get; }
+        PlayingItem LastReceivedCluster { get; }
+        ManualResetEvent WaitForConnectionId { get; }
     }
 }
