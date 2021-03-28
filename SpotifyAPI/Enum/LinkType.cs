@@ -3,6 +3,7 @@
     public enum LinkType
     {
         Unknown,
-        CollectionTracks
+        CollectionTracks,
+        Genre
     }
 }

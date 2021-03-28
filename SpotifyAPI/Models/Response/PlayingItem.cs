@@ -10,12 +10,14 @@ namespace SpotifyLibrary.Models.Response
     public class PlayingItem 
     {
         public PlayingItem(IAudioItem audioItem, 
+            IAudioId group,
             RepeatState repeatState,
             bool isShuffle,
             bool isPaused,
             IRemoteDevice activeDevice,
             IAudioId context, long timeStamp, long positionAsOfTimestamp, List<Descriptions> descriptions, TimeSpan duration)
         {
+            Group = group;
             AudioItem = audioItem;
             RepeatState = repeatState;
             IsShuffle = isShuffle;
@@ -32,6 +34,7 @@ namespace SpotifyLibrary.Models.Response
         public List<Descriptions> Descriptions { get; internal set; }
         public IAudioItem AudioItem { get; internal set; }
         public IAudioId Context { get; internal set; }
+        public IAudioId Group { get; }
         public RepeatState RepeatState { get; set; }
         public bool IsShuffle { get; set; }
         public bool IsPaused { get; set; }

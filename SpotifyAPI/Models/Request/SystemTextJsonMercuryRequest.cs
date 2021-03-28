@@ -1,21 +1,26 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using JetBrains.Annotations;
-using Newtonsoft.Json;
 using SpotifyLibrary.Models.Response;
 using SpotifyLibrary.Models.Response.Mercury;
 
 namespace SpotifyLibrary.Models.Request
 {
-
-    public readonly struct JsonMercuryRequest<T> where T : class
+    public readonly struct SystemTextJsonMercuryRequest<T> where T : class
     {
+        private static JsonSerializerOptions jsonSerializerOptions = new()
+        {
+            IgnoreNullValues = true, 
+            PropertyNameCaseInsensitive = true
+        };
         public readonly RawMercuryRequest Request;
 
-        public JsonMercuryRequest([NotNull] RawMercuryRequest request)
+        public SystemTextJsonMercuryRequest([NotNull] RawMercuryRequest request)
         {
             Request = request;
         }
@@ -27,10 +32,8 @@ namespace SpotifyLibrary.Models.Request
             {
                 var combined = Combine(resp.Payload.ToArray());
                 if (typeof(T) == typeof(string))
-                    return (T) (object) Encoding.UTF8.GetString(combined);
-                using var stream = new MemoryStream(combined);
-                using var reader = new StreamReader(stream, Encoding.UTF8);
-                var data = JsonSerializer.Create().Deserialize(reader, typeof(T)) as T;
+                    return (T)(object)Encoding.UTF8.GetString(combined);
+                var data = System.Text.Json.JsonSerializer.Deserialize<T>(new ReadOnlySpan<byte>(combined), jsonSerializerOptions);
                 return data;
             }
             catch (Exception x)
@@ -39,6 +42,7 @@ namespace SpotifyLibrary.Models.Request
                 throw;
             }
         }
+
 
         public static byte[] Combine(byte[][] arrays)
         {

@@ -11,7 +11,7 @@ namespace SpotifyLibrary.Api
     [OpenUrlEndpoint]
     public interface IViewsClient
     {
-        [Get("/v1/views/personalized-recommendations")]
+        [Get("/v1/views/desktop-home")]
         Task<ViewWrapper<ViewWrapper<IAudioItem>>> GetHomeView(HomeRequest request);
         [Get("/v1/views/{id}")]
         Task<ViewWrapper<IAudioItem>> GetCustomView(string id, HomeRequest request);

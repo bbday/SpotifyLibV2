@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using System.Text.Json.Serialization;
 using JetBrains.Annotations;
 using Newtonsoft.Json;
 using SpotifyLibrary.Services.Mercury;
@@ -16,10 +17,18 @@ namespace SpotifyLibrary.Models.Response
             _timeStamp = TimeProvider.CurrentTimeMillis();
         }
 
-        [JsonProperty("accessToken")] public string AccessToken { get; set; }
-        [JsonProperty("expiresIn")] public int ExpiresIn { get; set; }
-        [JsonProperty("tokenType")] public string TokenType { get; set; }
-        [JsonProperty("scope")] public string[] Scope { get; set; }
+        [JsonProperty("accessToken")]
+        [JsonPropertyName("accessToken")]
+        public string AccessToken { get; set; }
+        [JsonProperty("expiresIn")]
+        [JsonPropertyName("expiresIn")]
+        public int ExpiresIn { get; set; }
+        [JsonProperty("tokenType")] 
+        [JsonPropertyName("tokenType")] 
+        public string TokenType { get; set; }
+        [JsonProperty("scope")]
+        [JsonPropertyName("scope")]
+        public string[] Scope { get; set; }
 
         public bool Expired()
         {

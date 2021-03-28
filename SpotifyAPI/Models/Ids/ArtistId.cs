@@ -16,14 +16,18 @@ namespace SpotifyLibrary.Models.Ids
         {
         }
 
-        public override string ToMercuryUri(string locale)
-        {
-            throw new NotImplementedException();
-        }
+        public override string ToMercuryUri(string locale) =>
+            $"hm://artist/v1/{Id}/desktop?format=json&catalogue=premium&locale={locale}&cat=1";
 
         public override string ToHexId()
         {
-            throw new NotImplementedException();
+            var decoded = Id.FromBase62(true);
+            var hex = BitConverter.ToString(decoded).Replace("-", string.Empty);
+            if (hex.Length > 32)
+            {
+                hex = hex.Substring(hex.Length - 32, hex.Length - (hex.Length - 32));
+            }
+            return hex;
         }
         public static ArtistId FromHex(string hex)
         {

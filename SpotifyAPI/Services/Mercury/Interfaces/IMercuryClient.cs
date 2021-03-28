@@ -4,6 +4,7 @@ using JetBrains.Annotations;
 using SpotifyLibrary.Enum;
 using SpotifyLibrary.Models.Request;
 using SpotifyLibrary.Models.Response;
+using SpotifyLibrary.Models.Response.Mercury;
 
 namespace SpotifyLibrary.Services.Mercury.Interfaces
 {
@@ -12,6 +13,7 @@ namespace SpotifyLibrary.Services.Mercury.Interfaces
         SpotifyClient Client { get; }
         SpotifyConnection Connection { get; }
         ConcurrentDictionary<string, string> UserAttributes { get; }
+        Task<T> SendAsync<T>([NotNull] SystemTextJsonMercuryRequest<T> request) where T : class;
         Task<T> SendAsync<T>([NotNull] JsonMercuryRequest<T> request) where T : class;
         Task<MercuryResponse> SendAsync(RawMercuryRequest requestRequest);
         void Dispatch(MercuryPacket packet);

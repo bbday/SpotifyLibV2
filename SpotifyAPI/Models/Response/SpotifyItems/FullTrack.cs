@@ -7,31 +7,26 @@ using SpotifyLibrary.Enum;
 using SpotifyLibrary.Models.Enums;
 using SpotifyLibrary.Models.Ids;
 using SpotifyLibrary.Models.Response.Interfaces;
+using SpotifyLibrary.Models.Response.Mercury;
 
 namespace SpotifyLibrary.Models.Response.SpotifyItems
 {
-    public class FullTrack : ISpotifyItem
+    public class FullTrack : GenericSpotifyTrack, ITrackItem
     {
-        private IAudioId _id;
-        public AudioService AudioService => AudioService.Spotify;
-        [JsonIgnore]
-        public IAudioId Id => _id ??= new TrackId(Uri);
-        public AudioType Type { get; set; }
-        public List<UrlImage> Images => Album.Images;
-        public string Name { get; set; }
-        public string Description => string.Join(",", Artists.Select(z => z.Name));
+        public override List<UrlImage> Images => Album.Images;
+        public override string Description => string.Join(",", Artists.Select(z => z.Name));
         public string Href { get; set; }
-        public string Uri { get; set; }
-
-        [JsonProperty("id")]
-        public string __id { get; set; }
-
         public List<SimpleArtist> Artists { get; set; }
-
         public SimpleAlbum Album { get; set; }
         [JsonProperty("duration_ms")]
         public int DurationMs { get; set; }
         [JsonProperty("is_playable")]
         public bool CanPlay { get; set; }
+
+        public TimeSpan? DurationTs => TimeSpan.FromMilliseconds(DurationMs);
+        public IAudioItem Group => Album;
+        public long? Playcount => throw new NotImplementedException();
+
+        List<IAudioItem> ITrackItem.Artists => throw new NotImplementedException();
     }
 }

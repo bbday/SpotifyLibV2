@@ -1,5 +1,6 @@
 ﻿using JetBrains.Annotations;
 using SpotifyLibrary.Models.Response;
+using SpotifyLibrary.Models.Response.Mercury;
 
 namespace SpotifyLibrary.Models.Request
 {
@@ -15,6 +16,12 @@ namespace SpotifyLibrary.Models.Request
         {
             return new(RawMercuryRequest.Get(
                 $"hm://keymaster/token/authenticated?scope={string.Join(",", scope)}&client_id={KEYMASTER_CLIENT_ID}&device_id={deviceId}"));
+        }
+
+        public static JsonMercuryRequest<MercuryHub> GetHub(string country, string locale)
+        {
+            return new JsonMercuryRequest<MercuryHub>(
+                RawMercuryRequest.Get($"hm://hubview/km/v2/browse/?format=json&country={country}&locale={locale}"));
         }
     }
 }

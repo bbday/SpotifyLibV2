@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Connectstate;
 using Google.Protobuf;
 using Newtonsoft.Json.Linq;
+using Nito.AsyncEx;
 using Org.BouncyCastle.Utilities;
 using Spotify.Player.Proto;
 using Spotify.Player.Proto.Transfer;
@@ -18,6 +19,7 @@ using SpotifyLibrary.Connect.Exceptions;
 using SpotifyLibrary.Connect.Helpers;
 using SpotifyLibrary.Connect.Restrictions;
 using SpotifyLibrary.Connect.TracksKeepers;
+using SpotifyLibrary.Enum;
 using SpotifyLibrary.Exceptions;
 using SpotifyLibrary.Helpers;
 using SpotifyLibrary.Models.Ids;
@@ -25,6 +27,7 @@ using SpotifyLibrary.Services.Mercury;
 using SpotifyLibrary.Services.Mercury.Interfaces;
 using SpotifyLibrary.Helpers.Extensions;
 using SpotifyLibrary.Models;
+using SpotifyLibrary.Models.Response.Pathfinder;
 using ContextPlayerOptions = Connectstate.ContextPlayerOptions;
 
 namespace SpotifyLibrary.Connect
@@ -38,7 +41,57 @@ namespace SpotifyLibrary.Connect
                 return Arrays.AreEqual(track.Gid.ToByteArray(), Utils.HexToBytes(id.ToHexId()));
             else return false;
         }
+
+        public static AsyncLazy<string> GetColor(
+            this SpotifyClient client,
+             Uri imageUrl, 
+            ThemeEnum theme)
+        {
+            if (imageUrl == null)
+            {
+                throw new ArgumentNullException(nameof(imageUrl));
+            }
+            return new AsyncLazy<string>(async () =>
+            {
+                var cacheKey = $"color-{theme.ToString()}-{imageUrl}";
+                if (client.CacheManager != null)
+                {
+                    if (client.CacheManager.TryGetItem<string>(cacheKey,
+                        out string color))
+                    {
+                        return color;
+                    }
+                }
+
+                var @params =
+                    $"{{\"uri\":\"{imageUrl.ToString()}\"}}";
+                var getColor = await (await client.PathFinderClient).GetColors(@params);
+                if (getColor.HasError)
+                {
+                    throw new ColorNotFoundException(getColor.Errors, imageUrl);
+                }
+
+                var toSaveColor = theme switch
+                {
+                    ThemeEnum.Light => (string) getColor.Data.ExtractedColor.ColorLight.Hex,
+                    ThemeEnum.Dark => getColor.Data.ExtractedColor.ColorDark.Hex,
+                    _ => string.Empty
+                };
+                if (string.IsNullOrEmpty(toSaveColor))
+                    throw new ColorNotFoundException(new List<Error>(1)
+                    {
+                        new Error
+                        {
+                            Message = "No theme available for color."
+                        }
+                    }, imageUrl);
+                client.CacheManager?.SaveItem(cacheKey, toSaveColor);
+                return toSaveColor;
+            });
+        }
     }
+
+
     internal class LocalStateWrapper
     {
         private TracksKeeper _tracksKeeper;

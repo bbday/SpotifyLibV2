@@ -18,6 +18,7 @@ namespace SpotifyLibrary
 
         event EventHandler<PlayingItem> NewPlaybackWrapper;
         event EventHandler<bool> ShuffleStateChanged;
+        event EventHandler<double> PositionChanged;
         event EventHandler<RepeatState> RepeatStateChanged;
         ISpotifyPlayer Player { get; }
         PlayingItem LastReceivedCluster { get; }

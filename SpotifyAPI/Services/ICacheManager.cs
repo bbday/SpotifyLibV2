@@ -10,10 +10,8 @@ namespace SpotifyLibrary.Services
     {
         bool AllowCacheOfKey(string key);
         Task<(byte[]? chunk, bool exists)> TryGetChunk(ISpotifyId id, int index);
-        Task SaveChunk(ISpotifyId id, int index, byte[] data);
-        Task<T> GetItem<T>(string key, string subkey);
-        Task SaveItem<T>(string key, string subkey, T data);
-        T GetKey<T>(string key);
-        void SaveKey<T>(string key, T data);
+
+        bool TryGetItem<T>(string key, out T result);
+        void SaveItem<T>(string key, T item);
     }
 }

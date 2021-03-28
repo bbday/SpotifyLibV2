@@ -17,6 +17,7 @@ using SpotifyLibrary.Helpers;
 using SpotifyLibrary.Helpers.Extensions;
 using SpotifyLibrary.Models.Request;
 using SpotifyLibrary.Models.Response;
+using SpotifyLibrary.Models.Response.Mercury;
 using SpotifyLibrary.Services.Mercury.Interfaces;
 
 namespace SpotifyLibrary.Services.Mercury
@@ -60,6 +61,12 @@ namespace SpotifyLibrary.Services.Mercury
         public ConcurrentDictionary<string, string> UserAttributes => Connection.UserAttributes;
 
         public async Task<T> SendAsync<T>(JsonMercuryRequest<T> request) where T : class
+        {
+            var resp = await SendAsync(request.Request);
+            if (resp.StatusCode >= 200 && resp.StatusCode < 300) return request.Instantiate(resp);
+            throw new MercuryException(resp);
+        }
+        public async Task<T> SendAsync<T>(SystemTextJsonMercuryRequest<T> request) where T : class
         {
             var resp = await SendAsync(request.Request);
             if (resp.StatusCode >= 200 && resp.StatusCode < 300) return request.Instantiate(resp);

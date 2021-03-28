@@ -4,7 +4,7 @@ using JetBrains.Annotations;
 using Spotify;
 using SpotifyLibrary.Helpers;
 
-namespace SpotifyLibrary.Models.Response
+namespace SpotifyLibrary.Models.Response.Mercury
 {
     public readonly struct MercuryResponse : IDisposable
     {

@@ -20,17 +20,23 @@ namespace SpotifyLibrary.Models.Ids
             var regexMatches = new (Regex, LinkType CollectionTracks)[]
             {
                 (new Regex($"spotify:collection:tracks"), LinkType.CollectionTracks),
-                (new Regex("spotify:user:(.*):collection"), LinkType.CollectionTracks)
+                (new Regex("spotify:user:(.*):collection"), LinkType.CollectionTracks),
+                (new Regex($"spotify:genre:(.*)"), LinkType.Genre)
             };
             var firstMatch = regexMatches.FirstOrDefault(z 
                 => z.Item1.Match(uri).Success);
             if (firstMatch.Item1 != null)
             {
                 LinkType = firstMatch.CollectionTracks;
+                if (LinkType == LinkType.Genre)
+                {
+                    GenreType = uri.Split(':').Last();
+                }
             }
         }
 
-
+        public bool IsGenre => LinkType == LinkType.Genre;
+        public string? GenreType { get; }
         public bool Equals(IAudioId other)
         {
             if (other is LinkId link)

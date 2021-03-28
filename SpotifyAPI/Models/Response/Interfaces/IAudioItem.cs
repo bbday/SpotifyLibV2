@@ -18,6 +18,5 @@ namespace SpotifyLibrary.Models.Response.Interfaces
         List<UrlImage> Images { get; }
         string Name { get; }
         string Description { get; }
-        string Href { get; }
     }
 }

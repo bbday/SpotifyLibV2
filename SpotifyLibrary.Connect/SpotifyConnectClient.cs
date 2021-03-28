@@ -61,6 +61,7 @@ namespace SpotifyLibrary.Connect
 
         public event EventHandler<PlayingItem> NewPlaybackWrapper;
         public event EventHandler<bool> ShuffleStateChanged;
+        public event EventHandler<double> PositionChanged;
         public event EventHandler<RepeatState> RepeatStateChanged;
 
         public DealerClient DealerClient
@@ -91,6 +92,10 @@ namespace SpotifyLibrary.Connect
                 LastReceivedCluster.RepeatState = state;
             }
             RepeatStateChanged?.Invoke(sender, state);
+        }
+        internal void OnPositionChanged(object sender, double pos)
+        {
+            PositionChanged?.Invoke(sender, pos);
         }
 
         internal void OnShuffleStatecHanged(object sender, bool isShuffling)
@@ -156,6 +161,7 @@ namespace SpotifyLibrary.Connect
                 IAudioItem? item = null;
                 var descriptions = new List<Descriptions>();
                 var durationMs = 0;
+                IAudioId? groupId = null;
                 switch (itemId.AudioType)
                 {
                     case AudioType.Track:
@@ -165,6 +171,7 @@ namespace SpotifyLibrary.Connect
                             new Descriptions(z.Name, new ArtistId(z.Uri))));
                         durationMs = fullTrack.DurationMs;
                         item = fullTrack;
+                        groupId = fullTrack.Album.Id;
                         break;
                     case AudioType.Episode:
                         break;
@@ -172,7 +179,7 @@ namespace SpotifyLibrary.Connect
                         throw new NotImplementedException("?");
                 }
 
-                var clustered = new PlayingItem(item, repeatState,
+                var clustered = new PlayingItem(item, groupId,  repeatState,
                     currentState.Options.ShufflingContext,
                     currentState.IsPaused,
                     null,

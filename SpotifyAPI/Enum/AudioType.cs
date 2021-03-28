@@ -9,6 +9,7 @@
         Image,
         User,
         Playlist,
-        Link
+        Link,
+        Show
     }
 }

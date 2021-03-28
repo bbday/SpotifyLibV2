@@ -20,14 +20,19 @@ namespace SpotifyLibrary.Models.Ids
             var j = "spotify:album:" + k;
             return new AlbumId(j);
         }
-        public override string ToMercuryUri(string locale)
-        {
-            throw new NotImplementedException();
-        }
+        public override string ToMercuryUri(string locale) 
+            => $"hm://album/v1/album-app/album/{Uri}/desktop?country={SpotifyClient.Country}&catalogue=premium&locale={locale}";
+
 
         public override string ToHexId()
         {
-            throw new NotImplementedException();
+            var decoded = Id.FromBase62(true);
+            var hex = BitConverter.ToString(decoded).Replace("-", string.Empty);
+            if (hex.Length > 32)
+            {
+                hex = hex.Substring(hex.Length - 32, hex.Length - (hex.Length - 32));
+            }
+            return hex;
         }
     }
 }

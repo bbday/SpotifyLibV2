@@ -1,7 +1,7 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace SpotifyLibrary.Models.Response
+namespace SpotifyLibrary.Models.Response.Mercury
 {
     public class MercuryContextWrapperResponse
     {

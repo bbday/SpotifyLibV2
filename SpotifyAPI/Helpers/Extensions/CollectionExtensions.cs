@@ -1,10 +1,18 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace SpotifyLibrary.Helpers.Extensions
 {
     public static class CollectionExtensions
     {
+        public static IList<T> Sort<T, TKey>(this ICollection<T> col,
+            Func<T, TKey> sortFunc,
+            bool ascending)
+        {
+            return @ascending ? new List<T>(col.OrderBy(sortFunc)) :
+                new List<T>(col.OrderByDescending(sortFunc));
+        }
         public static void Swap<T>(this IList<T> list, int index1, int index2)
         {
             var temp = list[index1];

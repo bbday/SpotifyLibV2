@@ -254,13 +254,13 @@ namespace SpotifyLibrary.Connect
             _connectionId = conId;
             Debug.WriteLine("Updated Spotify-Connection-Id: " + _connectionId);
             _stateWrapper.PlayerState.IsSystemInitiated = true;
-            var data = await 
+            var data = await
                 UpdateState(PutStateReason.NewDevice, -1);
 
             var tryGet =
                 Connectstate.Cluster.Parser.ParseFrom(data);
-
-            ConnectClient.OnNewPlaybackWrapper(this, tryGet.PlayerState);
+            if (tryGet?.PlayerState?.Track != null)
+                ConnectClient.OnNewPlaybackWrapper(this, tryGet.PlayerState);
         }
 
         internal async Task<byte[]> UpdateState(PutStateReason reason, int playerTime)

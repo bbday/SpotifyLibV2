@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Connectstate;
 using SpotifyLibrary.Dealer;
 using SpotifyLibrary.Enum;
+using SpotifyLibrary.Services.Mercury;
 
 namespace SpotifyLibrary.Connect
 {
@@ -27,6 +28,7 @@ namespace SpotifyLibrary.Connect
                 "hm://connect-state/v1/cluster");
         }
 
+        private double _currentPosition;
         public async Task OnMessage(string uri, Dictionary<string, string> headers, byte[] payload)
         {
             if (uri.StartsWith("hm://track-playback/v1/command"))
@@ -76,6 +78,13 @@ namespace SpotifyLibrary.Connect
                             _spotifyConnectClient.OnShuffleStatecHanged(this, update.Cluster.PlayerState.Options.ShufflingContext);
                         }
                     }
+
+                    if (Math.Abs(_currentPosition - GetPosition(update.Cluster)) > 10)
+                    {
+                        var curPos = GetPosition(update.Cluster);
+                        _spotifyConnectClient.OnPositionChanged(this, curPos);
+                        _currentPosition = curPos;
+                    }
                 }
 
 
@@ -87,6 +96,11 @@ namespace SpotifyLibrary.Connect
             }
         }
 
+        public int GetPosition(Cluster cluster)
+        {
+            int diff = (int)(TimeProvider.CurrentTimeMillis() - cluster.PlayerState.Timestamp);
+            return (int)(cluster.PlayerState.PositionAsOfTimestamp + diff);
+        }
         private static RepeatState ParseRepeatState(Cluster cluster)
         {
             var repeatingTrack = cluster.PlayerState.Options.RepeatingTrack;
