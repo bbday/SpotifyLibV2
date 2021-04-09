@@ -1,4 +1,4 @@
-﻿using SpotifyLibrary.Models.Enums;
+﻿using MusicLibrary.Enum;
 
 namespace SpotifyLibrary.Models
 {

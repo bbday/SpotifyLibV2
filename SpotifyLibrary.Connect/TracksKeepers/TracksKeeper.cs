@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using Connectstate;
 using JetBrains.Annotations;
+using MusicLibrary.Interfaces;
 using Spotify.Player.Proto;
 using Spotify.Player.Proto.Transfer;
 using SpotifyLibrary.Connect.Contexts;
@@ -12,6 +13,7 @@ using SpotifyLibrary.Connect.Exceptions;
 using SpotifyLibrary.Exceptions;
 using SpotifyLibrary.Helpers;
 using SpotifyLibrary.Helpers.Extensions;
+using SpotifyLibrary.Models.Ids;
 using SpotifyLibrary.Services.Mercury.Interfaces;
 using UnsupportedContextException = SpotifyLibrary.Connect.Contexts.UnsupportedContextException;
 
@@ -31,6 +33,7 @@ namespace SpotifyLibrary.Connect.TracksKeepers
 
         private readonly AbsSpotifyContext _context;
         private readonly LocalStateWrapper _stateWrapper;
+
         internal TracksKeeper(LocalStateWrapper stateWrapper,
             AbsSpotifyContext context,
             IMercuryClient mercury)
@@ -39,12 +42,15 @@ namespace SpotifyLibrary.Connect.TracksKeepers
             _context = context;
             Mercury = mercury;
         }
+
         public bool IsPlayingFirst() => _stateWrapper.PlayerState.Index.Track == 0;
+
         public bool IsPlayingLast()
         {
             if (cannotLoadMore && !Queue.Any()) return _stateWrapper.PlayerState.Index.Track == Tracks.Count;
             return false;
         }
+
         public void InitializeFrom(Func<List<ContextTrack>, int> getIndex,
             ContextTrack track, Queue contextQueue)
         {
@@ -100,6 +106,7 @@ namespace SpotifyLibrary.Connect.TracksKeepers
                 Debug.WriteLine($"Failed updating current track metadata, {x.ToString()}");
             }
         }
+
         private void EnrichCurrentTrack(ContextTrack track)
         {
             if (isPlayingQueue)
@@ -109,13 +116,15 @@ namespace SpotifyLibrary.Connect.TracksKeepers
             }
             else
             {
-                int index = (int)_stateWrapper.PlayerState.Index.Track;
+                int index = (int) _stateWrapper.PlayerState.Index.Track;
                 var current = Tracks[index];
                 ProtoUtils.EnrichTrack(current, track);
                 Tracks[index] = current;
-                _stateWrapper.PlayerState.Track = ProtoUtils.ConvertToProvidedTrack(current, _stateWrapper.PlayerState.ContextUri);
+                _stateWrapper.PlayerState.Track =
+                    ProtoUtils.ConvertToProvidedTrack(current, _stateWrapper.PlayerState.ContextUri);
             }
         }
+
         public void UpdateContext([NotNull] List<ContextPage> updatedPages)
         {
             var updatedTracks = updatedPages
@@ -162,6 +171,7 @@ namespace SpotifyLibrary.Connect.TracksKeepers
         {
 
         }
+
         public void ToggleShuffle(bool setTrue)
         {
             if (!_context.IsFinite()) throw new NotImplementedException("cannot shuffle an infinite context");
@@ -200,6 +210,7 @@ namespace SpotifyLibrary.Connect.TracksKeepers
                     {
                         Tracks.Swap(0, shuffleKeepIndex);
                     }
+
                     shuffle.Unshuffle(Tracks);
                     SetCurrentTrackIndex(Tracks.FindIndex(z => z.Uri == currentlyPlaying.Uri));
                     Debug.WriteLine($"Unshuffled fisher yates");
@@ -226,9 +237,9 @@ namespace SpotifyLibrary.Connect.TracksKeepers
             {
                 while (true)
                 {
-                    if (_stateWrapper.Pages.NextPage()) 
+                    if (_stateWrapper.Pages.NextPage())
                         Tracks.AddRange(
-                        _stateWrapper.Pages.CurrentPage());
+                            _stateWrapper.Pages.CurrentPage());
                     else break;
                 }
             }
@@ -250,10 +261,12 @@ namespace SpotifyLibrary.Connect.TracksKeepers
 
             return true;
         }
+
         public void UpdateTrackCount()
         {
             if (_context.IsFinite())
-                _stateWrapper.PlayerState.ContextMetadata.AddOrUpdate("track_count", (Tracks.Count + Queue.Count).ToString());
+                _stateWrapper.PlayerState.ContextMetadata.AddOrUpdate("track_count",
+                    (Tracks.Count + Queue.Count).ToString());
             else
                 _stateWrapper.PlayerState.ContextMetadata.Remove("track_count");
         }
@@ -264,7 +277,8 @@ namespace SpotifyLibrary.Connect.TracksKeepers
 
             if (_context.IsFinite())
             {
-                var totalTracks = int.Parse(_stateWrapper.PlayerState.ContextMetadata.GetMetadataOrDefault("track_count", "-1"));
+                var totalTracks =
+                    int.Parse(_stateWrapper.PlayerState.ContextMetadata.GetMetadataOrDefault("track_count", "-1"));
                 if (totalTracks == -1) cannotLoadMore = false;
                 else cannotLoadMore = totalTracks == Tracks.Count;
             }
@@ -287,13 +301,15 @@ namespace SpotifyLibrary.Connect.TracksKeepers
             if (isPlayingQueue)
             {
                 var head = Queue.First;
-                _stateWrapper.PlayerState.Track = ProtoUtils.ConvertToProvidedTrack(head.Value, _stateWrapper.PlayerState.ContextUri);
+                _stateWrapper.PlayerState.Track =
+                    ProtoUtils.ConvertToProvidedTrack(head.Value, _stateWrapper.PlayerState.ContextUri);
                 Queue.Remove(head);
             }
             else
             {
-                var itemAtIndex = Tracks[(int)_stateWrapper.PlayerState.Index.Track];
-                _stateWrapper.PlayerState.Track = ProtoUtils.ConvertToProvidedTrack(itemAtIndex, _stateWrapper.PlayerState.ContextUri);
+                var itemAtIndex = Tracks[(int) _stateWrapper.PlayerState.Index.Track];
+                _stateWrapper.PlayerState.Track =
+                    ProtoUtils.ConvertToProvidedTrack(itemAtIndex, _stateWrapper.PlayerState.ContextUri);
             }
 
             UpdateLikeDislike();
@@ -303,7 +319,8 @@ namespace SpotifyLibrary.Connect.TracksKeepers
 
         public void UpdateLikeDislike()
         {
-            if (string.Equals(_stateWrapper.PlayerState.ContextMetadata.GetMetadataOrDefault("like-feedback-enabled", "0"), "1"))
+            if (string.Equals(
+                _stateWrapper.PlayerState.ContextMetadata.GetMetadataOrDefault("like-feedback-enabled", "0"), "1"))
             {
                 _stateWrapper.PlayerState.ContextMetadata.AddOrUpdate("like-feedback-selected",
                     _stateWrapper.PlayerState.Track.Metadata.GetMetadataOrDefault("like-feedback-selected", "0"));
@@ -313,7 +330,8 @@ namespace SpotifyLibrary.Connect.TracksKeepers
                 _stateWrapper.PlayerState.ContextMetadata.Remove("like-feedback-selected");
             }
 
-            if (string.Equals(_stateWrapper.PlayerState.ContextMetadata.GetMetadataOrDefault("dislike-feedback-enabled", "0"), "1"))
+            if (string.Equals(
+                _stateWrapper.PlayerState.ContextMetadata.GetMetadataOrDefault("dislike-feedback-enabled", "0"), "1"))
             {
                 _stateWrapper.PlayerState.ContextMetadata.AddOrUpdate("dislike-feedback-selected",
                     _stateWrapper.PlayerState.Track.Metadata.GetMetadataOrDefault("dislike-feedback-selected", "0"));
@@ -336,8 +354,9 @@ namespace SpotifyLibrary.Connect.TracksKeepers
         {
             _stateWrapper.PlayerState.Duration = duration;
             _stateWrapper.PlayerState.Track.Metadata["duration"] = duration.ToString();
-            UpdateMetadataFor((int)_stateWrapper.PlayerState.Index.Track, "duration", duration.ToString());
+            UpdateMetadataFor((int) _stateWrapper.PlayerState.Index.Track, "duration", duration.ToString());
         }
+
         public void UpdateMetadataFor(int index, [NotNull] string key, [NotNull] string value)
         {
             var ct = Tracks[index];
@@ -347,20 +366,137 @@ namespace SpotifyLibrary.Connect.TracksKeepers
 
         public void UpdatePrevNextTracks()
         {
-            var index = (int)_stateWrapper.PlayerState.Index.Track;
+            var index = (int) _stateWrapper.PlayerState.Index.Track;
 
             _stateWrapper.PlayerState.PrevTracks.Clear();
             for (int i = Math.Max(0, index - MAX_PREV_TRACKS); i < index; i++)
             {
-                _stateWrapper.PlayerState.PrevTracks.Add(ProtoUtils.ConvertToProvidedTrack(Tracks[i], _stateWrapper.PlayerState.ContextUri));
+                _stateWrapper.PlayerState.PrevTracks.Add(
+                    ProtoUtils.ConvertToProvidedTrack(Tracks[i], _stateWrapper.PlayerState.ContextUri));
             }
 
 
             _stateWrapper.PlayerState.NextTracks.Clear();
             for (int i = index + 1; i < Math.Min(Tracks.Count, index + 1 + MAX_PREV_TRACKS); i++)
             {
-                _stateWrapper.PlayerState.NextTracks.Add(ProtoUtils.ConvertToProvidedTrack(Tracks[i], _stateWrapper.PlayerState.ContextUri));
+                _stateWrapper.PlayerState.NextTracks.Add(
+                    ProtoUtils.ConvertToProvidedTrack(Tracks[i], _stateWrapper.PlayerState.ContextUri));
             }
+        }
+
+        public NextPlayable NextPlayable(bool configAutoplayEnabled)
+        {
+            if (_stateWrapper.IsRepeatingTrack)
+            {
+                _stateWrapper.SetRepeatingTrack(false);
+                return Connect.NextPlayable.OK_REPEAT;
+            }
+
+            if (Queue.Any())
+            {
+                isPlayingQueue = true;
+                UpdateState();
+
+                var k = Tracks[(int) _stateWrapper.PlayerState.Index.Track];
+                if (!ShouldPlay(k))
+                    return NextPlayable(configAutoplayEnabled);
+
+                return Connect.NextPlayable.OK_PLAY;
+            }
+
+            isPlayingQueue = false;
+
+            var play = true;
+            var next = _stateWrapper.NextPlayableDontSet();
+            if (next == null || next?.Index == -1)
+            {
+                if (!_context.IsFinite()) return Connect.NextPlayable.MISSING_TRACKS;
+
+                if (_stateWrapper.IsRepeatingContext)
+                {
+                    SetCurrentTrackIndex(0);
+                }
+                else
+                {
+                    if (configAutoplayEnabled)
+                    {
+                        return Connect.NextPlayable.AUTOPLAY;
+                    }
+                    else
+                    {
+                        SetCurrentTrackIndex(0);
+                        play = false;
+                    }
+                }
+            }
+            else
+            {
+                SetCurrentTrackIndex(next.Value.Index);
+            }
+
+            if (play) return Connect.NextPlayable.OK_PLAY;
+            else return Connect.NextPlayable.OK_PAUSE;
+        }
+
+        private bool ShouldPlay(ContextTrack track)
+        {
+            if (!PlayableId.IsSupported(track.Uri) || !PlayableId.ShouldPlay(track))
+                return false;
+
+            var filterExplicit = object.Equals(SpotifyClient.Current.UserAttributes["filter-explicit-content"], "1");
+            if (!filterExplicit) return true;
+
+            return !bool.Parse(track.Metadata.GetMetadataOrDefault("is_explicit", "false"));
+        }
+
+        public (int Index, IAudioId id)? NextPlayableDoNotSet()
+        {
+            if (_stateWrapper.IsRepeatingTrack)
+                return ((int) _stateWrapper.PlayerState.Index.Track,
+                    PlayableId.From(Tracks[(int) _stateWrapper.PlayerState.Index.Track]));
+
+            if (Queue.Any())
+                return (-1, PlayableId.From(Queue.First.Value));
+
+            int current = (int)_stateWrapper.PlayerState.Index.Track;
+            if (current == Tracks.Count - 1)
+            {
+                if (_stateWrapper.IsShufflingContext || cannotLoadMore) return null;
+
+                if (_stateWrapper.Pages.NextPage())
+                {
+                    Tracks.AddRange(_stateWrapper.Pages.CurrentPage());
+                }
+                else
+                {
+                    cannotLoadMore = true;
+                    UpdateTrackCount();
+                    return null;
+                }
+            }
+
+            if (!_context.IsFinite() && Tracks.Count - current <= 5)
+            {
+                if (_stateWrapper.Pages.NextPage())
+                {
+                    Tracks.AddRange(_stateWrapper.Pages.CurrentPage());
+                    Debug.WriteLine("Preloaded next page due to infinite context.");
+                }
+                else
+                {
+                    Debug.WriteLine("Couldn't (pre)load next page of context!");
+                }
+            }
+
+            int add = 1;
+            while (true)
+            {
+                var track = Tracks[current + add];
+                if (ShouldPlay(track)) break;
+                else add++;
+            }
+
+            return (current + add, PlayableId.From(Tracks[current + add]));
         }
     }
 }

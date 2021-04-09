@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Text;
 using System.Threading.Tasks;
 using Google.Protobuf;
 using SpotifyLibrary.Audio.KeyStuff;
@@ -101,20 +99,27 @@ namespace SpotifyLibrary.Audio
             int i = 0;
             while (true)
             {
-                int chunk = pos / ChannelManager.CHUNK_SIZE;
-                int chunkOff = pos % ChannelManager.CHUNK_SIZE;
+                try
+                {
+                    int chunk = pos / ChannelManager.CHUNK_SIZE;
+                    int chunkOff = pos % ChannelManager.CHUNK_SIZE;
 
-                CheckAvailability(chunk, true, false)
-                    .ConfigureAwait(false)
-                    .GetAwaiter().GetResult();
+                    CheckAvailability(chunk, true, false)
+                        .ConfigureAwait(false)
+                        .GetAwaiter().GetResult();
 
-                int copy = Math.Min(Buffer()[chunk].Length - chunkOff, count - i);
-                Array.Copy(Buffer()[chunk], chunkOff, buffer, offset + i, copy);
-                i += copy;
-                pos += copy;
+                    int copy = Math.Min(Buffer()[chunk].Length - chunkOff, count - i);
+                    Array.Copy(Buffer()[chunk], chunkOff, buffer, offset + i, copy);
+                    i += copy;
+                    pos += copy;
 
-                if (i == count || pos >= Size)
-                    return i;
+                    if (i == count || pos >= Size)
+                        return i;
+                }
+                catch(Exception x)
+                {
+                    Debug.WriteLine(x.ToString());
+                }
             }
         }
 

@@ -40,10 +40,11 @@ namespace SpotifyLibrary.Player
         /// <param name="chunks">Total number of chunks</param>
         /// <param name="b">Boolean indicating whether or not the chunk was retrieved from cache.</param>
         void ChunkReceived(ISpotifyId id, byte[] chunk, int chunkIndex, int chunks, bool b);
+
         /// <summary>
         /// Gets invoked and you should Seek.
         /// </summary>
-        void Seek(int position);
+        void Seek(object sender, int position);
 
         /// <summary>
         /// You should return a TimeSpan of the current mediaplayer's position.

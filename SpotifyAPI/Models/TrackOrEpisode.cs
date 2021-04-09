@@ -23,6 +23,29 @@ namespace SpotifyLibrary.Models
             else id = PlayableId.From(episode);
         }
 
+        public TrackOrEpisode(object? metadata)
+        {
+            switch (metadata)
+            {
+                case Track tr:
+                    this.track = tr;
+                    this.episode = null;
+                    id = PlayableId.From(tr);
+                    return;
+                case Episode ep:
+                    this.episode = ep;
+                    this.track = null;
+                    id = PlayableId.From(ep);
+                    return;
+                default:
+                    id = null;
+                    track = null;
+                    episode = null;
+                    break;
+            }
+        }
+
         public int Duration() => track?.Duration ?? episode.Duration;
+        public string Name => track?.Name ?? episode?.Name;
     }
 }

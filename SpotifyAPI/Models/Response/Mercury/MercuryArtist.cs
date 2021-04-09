@@ -4,11 +4,10 @@ using System.Linq;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using JetBrains.Annotations;
-using SpotifyLibrary.Enum;
-using SpotifyLibrary.Models.Enums;
+using MusicLibrary.Enum;
+using MusicLibrary.Interfaces;
+using MusicLibrary.Models;
 using SpotifyLibrary.Models.Ids;
-using SpotifyLibrary.Models.Response.Interfaces;
-using SpotifyLibrary.Models.Response.SpotifyItems;
 
 namespace SpotifyLibrary.Models.Response.Mercury
 {
@@ -28,7 +27,7 @@ namespace SpotifyLibrary.Models.Response.Mercury
         public AudioService AudioService => AudioService.Spotify;
         [Newtonsoft.Json.JsonIgnore] 
         public IAudioId Id => _id ??= new TrackId(Uri);
-        public AudioType Type => AudioType.Track;
+        public virtual AudioType Type => AudioType.Track;
 
         /// <summary>
         /// Name of the track.
@@ -44,8 +43,8 @@ namespace SpotifyLibrary.Models.Response.Mercury
 
         public string Uri { get; set; }
 
-        public virtual List<UrlImage> Images { get; }
-        public virtual string Description { get; }
+        public virtual List<UrlImage> Images { get; set; }
+        public virtual string Description { get; set; }
     }
     public class MercuryArtist : ISpotifyItem
     {
@@ -258,6 +257,7 @@ namespace SpotifyLibrary.Models.Response.Mercury
             }
         }
 
+        public TrackType TrackType => TrackType.AlbumTrack;
         public TimeSpan? DurationTs => TimeSpan.Zero;
         public IAudioItem Group => null;
         public List<IAudioItem> Artists { get; }

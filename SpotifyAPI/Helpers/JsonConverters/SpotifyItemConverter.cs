@@ -1,13 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Text.Json;
+using MusicLibrary.Enum;
+using MusicLibrary.Interfaces;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SpotifyLibrary.Enum;
 using SpotifyLibrary.Models.Ids;
-using SpotifyLibrary.Models.Response.Interfaces;
 using SpotifyLibrary.Models.Response.SpotifyItems;
 using JsonSerializer = Newtonsoft.Json.JsonSerializer;
 
@@ -103,29 +102,45 @@ namespace SpotifyLibrary.Helpers.JsonConverters
 
         public override object? ReadJson(JsonReader reader, Type objectType, object? existingValue, JsonSerializer serializer)
         {
-            var jsonObject = JObject.Load(reader);
+            switch (reader.TokenType)
+            {
+                case JsonToken.StartObject:
+                    var jsonObject = JObject.Load(reader);
+                    return GetItem(jsonObject, ref serializer);
+                case JsonToken.StartArray:
+                    var arr = JArray.Load(reader);
+                    var dt = 
+                        arr.Select(item => GetItem(item as JObject, ref serializer)).ToList();
+                    return dt;
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+        }
+        private IAudioItem GetItem(JObject jsonObject, ref JsonSerializer serializer)
+        {
             if (!System.Enum.TryParse<AudioType>(jsonObject["type"]?.ToString(), true, out var typ))
-                return new EmptyItem();
+                return new EmptyItem(jsonObject);
             ISpotifyItem item = typ switch
             {
                 AudioType.Artist => new SimpleArtist(),
                 AudioType.Album => new SimpleAlbum(),
                 AudioType.Playlist => new SimplePlaylist(),
+                AudioType.Show => new SimpleShow(),
                 AudioType.Link => (new LinkId(jsonObject["uri"]?.ToString())).LinkType switch
                 {
                     LinkType.CollectionTracks => new SimplePlaylist(true),
-                    _ => new EmptyItem()
+                    _ => new EmptyItem(jsonObject)
                 },
-                _ => new EmptyItem()
+                _ => new EmptyItem(jsonObject)
             };
             serializer.Populate(jsonObject.CreateReader(), item);
             return item;
-
         }
-
         public override bool CanConvert(Type objectType)
         {
-            return objectType == typeof(ISpotifyItem);
+            return objectType == typeof(ISpotifyItem)
+                || objectType == typeof(List<ISpotifyItem>);
         }
 
 

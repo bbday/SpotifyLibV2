@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using SpotifyLibrary.Enum;
 using SpotifyLibrary.Models.Request;
-using SpotifyLibrary.Models.Response;
 using SpotifyLibrary.Models.Response.Mercury;
 
 namespace SpotifyLibrary.Services.Mercury.Interfaces

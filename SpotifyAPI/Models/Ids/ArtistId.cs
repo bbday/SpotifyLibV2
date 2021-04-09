@@ -1,11 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Base62;
-using SpotifyLibrary.Enum;
+using MusicLibrary.Enum;
 using SpotifyLibrary.Helpers;
-using SpotifyLibrary.Models.Enums;
 
 namespace SpotifyLibrary.Models.Ids
 {
@@ -36,5 +33,10 @@ namespace SpotifyLibrary.Models.Ids
             return new ArtistId(j);
         }
 
+        public string ToMercuryUriDetailed() =>
+            $"hm://artist-identity-view/v2/profile/{Id}?fields=name,autobiography,biography,gallery,monthlyListeners,avatar&imgSize=large";
+
+        public string MercuryInsights() =>
+            $"hm://creatorabout/v0/artist-insights/{Id}";
     }
 }

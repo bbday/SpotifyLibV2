@@ -1,30 +1,27 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Concurrent;
-using System.Globalization;
 using System.Linq;
 using System.Net.Http;
 using System.Reflection;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using MusicLibrary;
+using MusicLibrary.Enum;
+using MusicLibrary.Interfaces;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using Newtonsoft.Json.Serialization;
 using Refit;
+using Spotify;
 using SpotifyLibrary.Api;
 using SpotifyLibrary.Attributes;
 using SpotifyLibrary.Audio;
 using SpotifyLibrary.Audio.KeyStuff;
-using SpotifyLibrary.Authentication;
 using SpotifyLibrary.ClientHandlers;
 using SpotifyLibrary.Configs;
 using SpotifyLibrary.Dealer;
-using SpotifyLibrary.Enum;
 using SpotifyLibrary.Helpers;
 using SpotifyLibrary.Helpers.JsonConverters;
-using SpotifyLibrary.Models;
+using SpotifyLibrary.Models.Response;
 using SpotifyLibrary.Player;
 using SpotifyLibrary.Services;
 using SpotifyLibrary.Services.Mercury;
@@ -32,7 +29,7 @@ using SpotifyLibrary.Services.Mercury.Interfaces;
 
 namespace SpotifyLibrary
 {
-    public class SpotifyClient
+    public class SpotifyClient : IMusicService
     {
         private ISpotifyConnectClient _connectClient;
         private IMercuryClient _mercuryClient;
@@ -44,29 +41,40 @@ namespace SpotifyLibrary
         private Task<IMeClient> _meClient;
         private Task<ITracksClient> _tracksClient;
         private Task<IPathfinderClient> _pathfinderClient;
+        private Task<IMetadata> _metadataClient;
+        private Task<IEpisodes> _episodesClient;
+        private Task<IConnectState> _connectState;
+        private Task<IPlaylistsClient> _playlists;
+        private Task<IUsersClient> _usersClient;
+        private Task<ISearchClient> _searchClient;
+        private Task<IAlbumsClient> _albumsClient;
+        private Task<IConcerts> _concerts;
 
         public SpotifyClient([CanBeNull] ICacheManager cache = null)
         {
             CacheManager = cache;
+            PlaylistHelper = new SpotifyPlaylistHelper(this);
+            Current = this;
         }
-
         internal static string Country { get; private set; }
-
-        public Task<SpotifyConnectionResult> Authenticate(SpotifyConfiguration config)
+        public string SqlPath => Config.SqlPath;
+        public Task<SpotifyConnectionResult> Authenticate(SpotifyConfiguration config, bool isLocal)
         {
             Config = config;
-            return MercuryClient.Connection.Connect();
+            return MercuryClient.Connection.Connect(isLocal);
         }
-
-        public Task AttachClient(ISpotifyConnectClient connectClient,
+        public SpotifyPlaylistHelper PlaylistHelper { get; }
+        public async Task AttachClient(ISpotifyConnectClient connectClient,
             IWebsocketClient ws)
         {
-            var dealerClient = new DealerClient(Tokens, ws);
+            var dealerClient = new DealerClient((CurrentUser as PrivateUser)
+                .Uri.Split(':').Last(), 
+                Tokens, ws);
             dealerClient.Attach();
             connectClient.Client = this;
             connectClient.DealerClient = dealerClient;
             _connectClient = connectClient;
-            return dealerClient.Connect();
+            await dealerClient.Connect();
         }
 
         public ISpotifyConnectClient ConnectClient
@@ -79,6 +87,7 @@ namespace SpotifyLibrary
             }
         }
 
+        public Task<IConnectState> ConnectState => _connectState ??= BuildLoggableClient<IConnectState>();
         public ITokensProvider Tokens => _tokens ??= new TokensProvider(MercuryClient);
 
         public IMercuryClient MercuryClient
@@ -90,15 +99,23 @@ namespace SpotifyLibrary
                         (at, endedAt, reason) => { ConnectionDropped?.Invoke(this, (at, endedAt, reason)); },
                         async timetaken =>
                         {
-                            var user = await MeClient;
-                            var curUser = await user.GetCurrentUser();
-                            Authenticated?.Invoke(this, (timetaken, curUser));
-                            Country = curUser.Country;
-                        }, _audioKeyManager);
+                            if(timetaken == TimeSpan.Zero)
+                            {
+                                Authenticated?.Invoke(this, (timetaken, null));
+                            }
+                            else
+                            {
+                                var user = await MeClient;
+                                var curUser = await user.GetCurrentUser();
+                                CurrentUser = curUser;
+                                Authenticated?.Invoke(this, (timetaken, CurrentUser));
+                                Country = curUser.Country;
+                            }
+                        });
                 return _mercuryClient;
             }
         }
-
+        public IAudioUser CurrentUser { get; private set; }
         public bool IsConnected => MercuryClient?.Connection != null
                                    && MercuryClient.Connection.IsConnected;
 
@@ -138,7 +155,11 @@ namespace SpotifyLibrary
                 return _contentFeeder;
             }
         }
-
+        public Task<IConcerts> ConcertsClient => _concerts ??= BuildLoggableClient<IConcerts>();
+        public Task<IAlbumsClient> AlbumsClient =>
+            _albumsClient ??= BuildLoggableClient<IAlbumsClient>();
+        public Task<ISearchClient> SearchClient => _searchClient ??= BuildLoggableClient<ISearchClient>();
+        public Task<IPlaylistsClient> PlaylistsClient => _playlists ??= BuildLoggableClient<IPlaylistsClient>();
         public Task<ITracksClient> TracksClient => _tracksClient ??= BuildLoggableClient<ITracksClient>();
         public Task<IMeClient> MeClient => _meClient ??= BuildLoggableClient<IMeClient>();
 
@@ -148,6 +169,9 @@ namespace SpotifyLibrary
         public string CountryCode => MercuryClient.Connection.CountryCode;
         public ICacheManager CacheManager { get; set; }
         public Task<IPathfinderClient> PathFinderClient => _pathfinderClient ??= BuildLoggableClient<IPathfinderClient>();
+        public Task<IMetadata> MetadataClient => _metadataClient ??= BuildLoggableClient<IMetadata>();
+        public Task<IEpisodes> EpisodesClient => _episodesClient ??= BuildLoggableClient<IEpisodes>();
+        public Task<IUsersClient> UserClient => _usersClient ??= BuildLoggableClient<IUsersClient>();
 
         public event EventHandler<(DateTime StartedAt, DateTime EndedAt, ConnectionDroppedReason Reason)>
             ConnectionDropped;
@@ -223,6 +247,8 @@ namespace SpotifyLibrary
 
             throw new NotImplementedException("No BaseUrl or ResolvedEndpoint attribute was defined");
         }
+        public static SpotifyClient Current { get; private set; }
+        [CanBeNull] public APWelcome Apwelcome => MercuryClient?.Connection?.ApWelcome;
     }
 
     public enum LoggedOutReason

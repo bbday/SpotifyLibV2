@@ -1,12 +1,11 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using MusicLibrary.Enum;
+using MusicLibrary.Interfaces;
+using MusicLibrary.Models;
 using Newtonsoft.Json;
-using SpotifyLibrary.Enum;
 using SpotifyLibrary.Helpers.JsonConverters;
-using SpotifyLibrary.Models.Enums;
 using SpotifyLibrary.Models.Ids;
-using SpotifyLibrary.Models.Response.Interfaces;
-using SpotifyLibrary.Models.Response.SpotifyItems;
 
 namespace SpotifyLibrary.Models.Response.Mercury
 {
@@ -78,9 +77,7 @@ namespace SpotifyLibrary.Models.Response.Mercury
         [J("subtitle")] public string Subtitle { get; set; }
 
         public PuffImage PuffImage => Image as PuffImage;
-
     }
-
     public class PuffImage
     {
         [J("left")] public string Left { get; set; }
@@ -170,6 +167,7 @@ namespace SpotifyLibrary.Models.Response.Mercury
         public string Name => Model.Title;
         public string Description => string.Empty;
         public override IAudioId Id => _id ??= new LinkId(Uri);
+
     }
 
     public class BfsPuff : Bfs

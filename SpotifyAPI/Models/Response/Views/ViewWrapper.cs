@@ -1,6 +1,7 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Collections.Generic;
+using JetBrains.Annotations;
+using MusicLibrary.Models;
 using Newtonsoft.Json;
-using SpotifyLibrary.Models.Response.Interfaces;
 using SpotifyLibrary.Models.Response.Paging;
 
 namespace SpotifyLibrary.Models.Response.Views
@@ -19,6 +20,18 @@ namespace SpotifyLibrary.Models.Response.Views
 
         [JsonProperty("tag_line")]
         public string TagLine { get; set; }
+        [JsonProperty("name")]
         public string Name { get; set; }
+        [JsonProperty("rendering")]
+        public string Rendering { get; set; }
+        [JsonProperty("images")]
+        [CanBeNull] public List<ViewImage> Images { get; set; }
+    }
+
+    public class ViewImage : UrlImage
+    {
+        public string Name { get; set; }
+        public int Width { get; set; }
+        public int Height { get; set; }
     }
 }

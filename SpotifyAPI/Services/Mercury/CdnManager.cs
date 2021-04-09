@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Text;
 using System.Threading.Tasks;
 using Flurl;
 using Flurl.Http;
@@ -13,14 +11,12 @@ using JetBrains.Annotations;
 using Spotify.Download.Proto;
 using SpotifyLibrary.Audio;
 using SpotifyLibrary.Audio.KeyStuff;
-using SpotifyLibrary.Configs;
 using SpotifyLibrary.Exceptions;
 using SpotifyLibrary.Helpers;
 using SpotifyLibrary.Helpers.Extensions;
 using SpotifyLibrary.Models;
 using SpotifyLibrary.Models.Ids;
 using SpotifyLibrary.Models.Request;
-using SpotifyLibrary.Player;
 using SpotifyProto;
 
 namespace SpotifyLibrary.Services.Mercury
@@ -61,6 +57,51 @@ namespace SpotifyLibrary.Services.Mercury
             input.CopyTo(mem);
             return (mem.ToArray(), httpWebResponse.Headers);
         }
+
+
+        public async Task<ByteString> GetAudioKey(
+            Track track, 
+            AudioFile file)
+        {
+            var start = TimeProvider.CurrentTimeMillis();
+            var key = await Task.Run(() => _session.AudioKeyManager.GetAudioKey(track.Gid, file.FileId));
+            var audioKeyTime = (int)(TimeProvider.CurrentTimeMillis() - start);
+            return ByteString.CopyFrom(key);
+        }
+
+        public async Task<(Track Track, AudioFile File)> GetFile(ISpotifyId spotifyId,
+            IAudioQualityPicker audioQualityPicker)
+        {
+            var trackFetched = await _session.MercuryClient
+                .SendAsync(RawMercuryRequest.Get("hm://metadata/4/track/" +
+                                                 spotifyId.ToHexId().ToLower() +
+                                                 $"?country={_session.CountryCode}"));
+            var original = Track.Parser.WithDiscardUnknownFields(true).ParseFrom(
+                trackFetched.Payload.SelectMany(z => z).ToArray());
+
+
+            var track = PickAlternativeIfNecessary(original);
+
+            if (track == null)
+            {
+                var country = _session.CountryCode;
+                if (country != null)
+                    ContentRestrictedException.CheckRestrictions(country, original.Restriction.ToList());
+
+                Debug.WriteLine("Couldn't find playable track: " + spotifyId.ToString());
+                throw new FeederException();
+            }
+            var file = audioQualityPicker.GetFile(track.File.ToList());
+            if (file == null)
+            {
+                Debug.WriteLine("Couldn't find any suitable audio file, available: " + string.Join(Environment.NewLine,
+                    track.File.ToList().Select(z => z.FileId.ToBase64())));
+                throw new FeederException();
+            }
+
+            return (track, file);
+        }
+
 
         public async Task<IGeneralAudioStream> CdnFactory(
           ISpotifyId id,
@@ -131,45 +172,16 @@ namespace SpotifyLibrary.Services.Mercury
             bool preload,
             [CanBeNull] IHaltListener haltListener)
         {
-            var trackFetched = await _session.MercuryClient
-                .SendAsync(RawMercuryRequest.Get("hm://metadata/4/track/" +
-                                                id.ToHexId().ToLower() +
-                                                $"?country={_session.CountryCode}"));
-            var original = Track.Parser.WithDiscardUnknownFields(true).ParseFrom(
-                 trackFetched.Payload.SelectMany(z => z).ToArray());
-
-
-            var track = PickAlternativeIfNecessary(original);
-
-            if (track == null)
-            {
-                var country = _session.CountryCode;
-                if (country != null)
-                    ContentRestrictedException.CheckRestrictions(country, original.Restriction.ToList());
-
-                Debug.WriteLine("Couldn't find playable track: " + id.ToString());
-                throw new FeederException();
-            }
-
-            var data = await LoadTrack(id, track, audioQualityPicker, preload, haltListener);
-
-            return data;
-        }
-
-        private async Task<IGeneralAudioStream> LoadTrack(ISpotifyId id, Track track,
-            IAudioQualityPicker audioQualityPicker, bool preload, IHaltListener haltListener)
-        {
-            var file = audioQualityPicker.GetFile(track.File.ToList());
-            if (file == null)
-            {
-                Debug.WriteLine("Couldn't find any suitable audio file, available: " + string.Join(Environment.NewLine,
-                    track.File.ToList().Select(z => z.FileId.ToBase64())));
-                throw new FeederException();
-            }
-
-            var r = await LoadStream(id, file, track, null, preload, haltListener);
+            var (track, file) = await GetFile(id, audioQualityPicker);
+            var r = await LoadStream(id, 
+                file,
+                track, 
+                null,
+                preload, 
+                haltListener);
             return r;
         }
+
 
         private async Task<IGeneralAudioStream> LoadStream(ISpotifyId id, AudioFile file, Track track, Episode episode, bool preload,
             IHaltListener haltListener)

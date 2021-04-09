@@ -5,29 +5,26 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Xml;
-using SpotifyLibrary.Audio.KeyStuff;
 using SpotifyLibrary.Enum;
 using SpotifyLibrary.Helpers.Extensions;
-using SpotifyLibrary.Services.Mercury.Interfaces;
 
 namespace SpotifyLibrary
 {
     internal class SpotifyReceiver : IDisposable
     {
         private readonly CancellationTokenSource _cts;
-        private readonly IMercuryClient _mercuryClient;
         private readonly SpotifyConnection _stream;
         private readonly ConcurrentDictionary<string, string> _userAttributes;
         private readonly Thread backgroundThread;
-
+        private readonly SpotifyClient _client;
         internal SpotifyReceiver(
             SpotifyConnection stream,
-            IMercuryClient mercuryClient,
+            SpotifyClient mercuryClient,
             ConcurrentDictionary<string, string> userAttributes, CancellationToken? ctx = null)
         {
             _userAttributes = userAttributes;
             _stream = stream;
-            _mercuryClient = mercuryClient;
+            _client = mercuryClient;
             _cts = new CancellationTokenSource();
             var ts = new ThreadStart(BackgroundMethod);
             backgroundThread = new Thread(ts);
@@ -98,11 +95,11 @@ namespace SpotifyLibrary
                     case MercuryPacketType.MercurySub:
                     case MercuryPacketType.MercuryUnsub:
                     case MercuryPacketType.MercuryEvent:
-                        _mercuryClient.Dispatch(packet);
+                        _client.MercuryClient.Dispatch(packet);
                         break;
                     case MercuryPacketType.AesKey:
                     case MercuryPacketType.AesKeyError:
-                        _mercuryClient.Client.AudioKeyManager.Dispatch(packet);
+                        _client.MercuryClient.Client.AudioKeyManager.Dispatch(packet);
                         break;
                     case MercuryPacketType.ProductInfo:
                         try

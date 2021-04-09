@@ -1,11 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Collections.Generic;
+using MusicLibrary.Enum;
+using MusicLibrary.Interfaces;
+using MusicLibrary.Models;
 using Newtonsoft.Json;
-using SpotifyLibrary.Enum;
-using SpotifyLibrary.Models.Enums;
 using SpotifyLibrary.Models.Ids;
-using SpotifyLibrary.Models.Response.Interfaces;
 
 namespace SpotifyLibrary.Models.Response.SpotifyItems
 {
@@ -13,14 +11,34 @@ namespace SpotifyLibrary.Models.Response.SpotifyItems
     {
         private IAudioId __id;
 
-        public AudioType Type { get; set; }
-        public List<UrlImage> Images { get; set; }
+        public AudioType Type => AudioType.Artist;
+        private List<UrlImage> _images;
+        public List<UrlImage> Images
+        {
+            get
+            {
+                if (_images == null)
+                {
+                    if (Image != null)
+                        _images = new List<UrlImage>(1)
+                        {
+                            new UrlImage
+                            {
+                                Url = Image
+                            }
+                        };
+                }
+
+                return _images;
+            }
+            set => _images = value;
+        }
+        public string Image { get; set; }
         public string Name { get; set; }
 
         public string Description
         {
             get => "Artist";
-            set => throw new NotImplementedException();
         }
         public string Href { get; set; }
         public string Uri { get; set; }

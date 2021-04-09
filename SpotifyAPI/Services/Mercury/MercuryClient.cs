@@ -7,16 +7,14 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Google.Protobuf;
+using MusicLibrary.Enum;
 using Spotify;
-using SpotifyLibrary.Audio.KeyStuff;
 using SpotifyLibrary.Callbacks;
-using SpotifyLibrary.Configs;
 using SpotifyLibrary.Enum;
 using SpotifyLibrary.Exceptions;
 using SpotifyLibrary.Helpers;
 using SpotifyLibrary.Helpers.Extensions;
 using SpotifyLibrary.Models.Request;
-using SpotifyLibrary.Models.Response;
 using SpotifyLibrary.Models.Response.Mercury;
 using SpotifyLibrary.Services.Mercury.Interfaces;
 
@@ -46,14 +44,13 @@ namespace SpotifyLibrary.Services.Mercury
 
         internal MercuryClient(SpotifyClient client,
             MercuryConnectionDisconnected disconnected,
-            MercuryConnectionEstablished established,
-            IAudioKeyManager audioKeyManager) : base("mercury")
+            MercuryConnectionEstablished established) : base("mercury")
         {
             Client = client;
             _disconnected = disconnected;
             _established = established;
             Connection = new SpotifyConnection(client,
-                disconnected, established, this);
+                disconnected, established);
         }
 
         public SpotifyClient Client { get; }

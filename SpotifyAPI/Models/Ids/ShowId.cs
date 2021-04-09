@@ -1,11 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Base62;
-using SpotifyLibrary.Enum;
+using MusicLibrary.Enum;
 using SpotifyLibrary.Helpers;
-using SpotifyLibrary.Models.Enums;
 
 namespace SpotifyLibrary.Models.Ids
 {

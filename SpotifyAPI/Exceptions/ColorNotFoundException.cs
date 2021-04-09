@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using SpotifyLibrary.Models.Response.Pathfinder;
 
 namespace SpotifyLibrary.Exceptions

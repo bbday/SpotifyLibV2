@@ -1,5 +1,4 @@
 ﻿using JetBrains.Annotations;
-using SpotifyLibrary.Models.Response;
 using SpotifyLibrary.Models.Response.Mercury;
 
 namespace SpotifyLibrary.Callbacks

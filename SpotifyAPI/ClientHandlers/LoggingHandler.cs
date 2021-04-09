@@ -27,14 +27,9 @@ namespace SpotifyLibrary.ClientHandlers
             request.Headers.Authorization =
                 new AuthenticationHeaderValue("Bearer",
                     (await _tokensProvider.GetToken("playlist-read")).AccessToken);
+
             var response = await base.SendAsync(request, cancellationToken);
             _messageReceivedDelegate(response);
-            Debug.WriteLine("Response:");
-            Debug.WriteLine(response.ToString());
-            if (response.Content != null) Debug.WriteLine(await response.Content.ReadAsStringAsync());
-
-            Console.WriteLine();
-
             return response;
         }
     }

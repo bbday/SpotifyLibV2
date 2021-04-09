@@ -8,6 +8,8 @@ using System.Text;
 using System.Threading.Tasks;
 using Connectstate;
 using Google.Protobuf;
+using MusicLibrary.Enum;
+using MusicLibrary.Interfaces;
 using Newtonsoft.Json.Linq;
 using Nito.AsyncEx;
 using Org.BouncyCastle.Utilities;
@@ -44,13 +46,14 @@ namespace SpotifyLibrary.Connect
 
         public static AsyncLazy<string> GetColor(
             this SpotifyClient client,
-             Uri imageUrl, 
+            Uri imageUrl,
             ThemeEnum theme)
         {
             if (imageUrl == null)
             {
                 throw new ArgumentNullException(nameof(imageUrl));
             }
+
             return new AsyncLazy<string>(async () =>
             {
                 var cacheKey = $"color-{theme.ToString()}-{imageUrl}";
@@ -99,16 +102,21 @@ namespace SpotifyLibrary.Connect
         private readonly SpotifyRequestState requestState;
         private HttpClient _cuePointsClient;
         private readonly IMercuryClient _mercury;
+
         internal LocalStateWrapper(SpotifyRequestState requestState,
             IMercuryClient mercury)
         {
             _mercury = mercury;
             this.requestState = requestState;
-            PlayerState = InitState();
+            PlayerState = InitState(new PlayerState());
             this.requestState.Player.StateChanged += async (state, metadata) =>
             {
                 switch (state)
                 {
+                    case MediaPlaybackState.PositionChanged:
+                        SetPosition((int)requestState.Player.Position.TotalMilliseconds);
+                        await Updated();
+                        break;
                     case MediaPlaybackState.None:
                         break;
                     case MediaPlaybackState.Buffering:
@@ -156,6 +164,7 @@ namespace SpotifyLibrary.Connect
                             return i;
                         }
                     }
+
                     return -1;
                 }, pb.CurrentTrack, cmd.Queue);
             }
@@ -201,6 +210,7 @@ namespace SpotifyLibrary.Connect
 
             return RenewSessionId();
         }
+
         private async Task LoadTransforming()
         {
             if (_tracksKeeper == null) throw new IllegalStateException();
@@ -222,7 +232,8 @@ namespace SpotifyLibrary.Connect
                 _cuePointsClient ??= new HttpClient();
                 var content = new StringContent(obj.ToString(), Encoding.UTF8, "application/json");
                 _cuePointsClient.DefaultRequestHeaders.Authorization =
-                    new AuthenticationHeaderValue("Bearer", (await requestState.ConnectClient.Client.Tokens.GetToken("playlist-read"))
+                    new AuthenticationHeaderValue("Bearer",
+                        (await requestState.ConnectClient.Client.Tokens.GetToken("playlist-read"))
                         .AccessToken);
                 var resp = await _cuePointsClient.PostAsync(url, content);
                 if (resp != null && resp.IsSuccessStatusCode)
@@ -230,6 +241,7 @@ namespace SpotifyLibrary.Connect
                     var dt = await resp.Content.ReadAsStringAsync();
                     UpdateContext(JObject.Parse(dt));
                 }
+
                 Debug.WriteLine("Updated context with transforming information!");
             }
             catch (Exception ex)
@@ -239,6 +251,7 @@ namespace SpotifyLibrary.Connect
                 return;
             }
         }
+
         private void UpdateContext(JObject parse)
         {
             var uri = parse["uri"].ToString();
@@ -249,28 +262,33 @@ namespace SpotifyLibrary.Connect
                 return;
             }
 
-            ProtoUtils.CopyOverMetadata(((JObject)parse["metadata"])!, PlayerState);
-            _tracksKeeper.UpdateContext(ProtoUtils.JsonToContextPages(((JArray)parse["pages"])!));
+            ProtoUtils.CopyOverMetadata(((JObject) parse["metadata"])!, PlayerState);
+            _tracksKeeper.UpdateContext(ProtoUtils.JsonToContextPages(((JArray) parse["pages"])!));
         }
+
         public void SetRepeatingContext(bool value)
         {
             if (Context == null) return;
 
-            PlayerState.Options.RepeatingContext = true && Context.Restrictions.Can(RestrictionsManager.Action.REPEAT_CONTEXT);
+            PlayerState.Options.RepeatingContext =
+                true && Context.Restrictions.Can(RestrictionsManager.Action.REPEAT_CONTEXT);
         }
 
         public void SetRepeatingTrack(bool value)
         {
             if (Context == null) return;
-            PlayerState.Options.RepeatingTrack = true && Context.Restrictions.Can(RestrictionsManager.Action.REPEAT_TRACK);
+            PlayerState.Options.RepeatingTrack =
+                true && Context.Restrictions.Can(RestrictionsManager.Action.REPEAT_TRACK);
         }
+
         public void SetShufflingContext(bool value)
         {
             if (Context == null
                 || _tracksKeeper == null) return;
 
             var old = IsShufflingContext;
-            PlayerState.Options.ShufflingContext = value && Context.Restrictions.Can(RestrictionsManager.Action.SHUFFLE);
+            PlayerState.Options.ShufflingContext =
+                value && Context.Restrictions.Can(RestrictionsManager.Action.SHUFFLE);
 
             if (old != IsShufflingContext)
                 _tracksKeeper.ToggleShuffle(IsShufflingContext);
@@ -281,7 +299,7 @@ namespace SpotifyLibrary.Connect
             ? null
             : PlayableId.From(PlayerState.Track);
 
-        public int Position => (int)GetPosition();
+        public int Position => (int) GetPosition();
         public PagesLoader Pages { get; internal set; }
 
         public bool IsPaused => PlayerState.IsPlaying && PlayerState.IsPaused;
@@ -300,7 +318,7 @@ namespace SpotifyLibrary.Connect
                 {
                     if (_tracksKeeper != null)
                     {
-                        return (uint)_tracksKeeper.Tracks.Count;
+                        return (uint) _tracksKeeper.Tracks.Count;
                     }
                     else
                     {
@@ -308,35 +326,33 @@ namespace SpotifyLibrary.Connect
                     }
                 }
 
-                return (uint)trackCountInt;
+                return (uint) trackCountInt;
             }
         }
 
-        private static PlayerState InitState()
+        public static PlayerState InitState(PlayerState plstate)
         {
-            return new PlayerState
+            plstate.PlaybackSpeed = 1.0;
+            plstate.SessionId = string.Empty;
+            plstate.PlaybackId = string.Empty;
+            plstate.Suppressions = new Suppressions();
+            plstate.ContextRestrictions = new Connectstate.Restrictions();
+            plstate.Options = new ContextPlayerOptions
             {
-                PlaybackSpeed = 1.0,
-                SessionId = string.Empty,
-                PlaybackId = string.Empty,
-                Suppressions = new Suppressions(),
-                ContextRestrictions = new Connectstate.Restrictions(),
-                Options = new ContextPlayerOptions
-                {
-                    RepeatingTrack = false,
-                    ShufflingContext = false,
-                    RepeatingContext = false
-                },
-                Position = 0,
-                PositionAsOfTimestamp = 0,
-                IsPlaying = false
+                RepeatingTrack = false,
+                ShufflingContext = false,
+                RepeatingContext = false
             };
+            plstate.Position = 0;
+            plstate.PositionAsOfTimestamp = 0;
+            plstate.IsPlaying = false;
+            return plstate;
         }
 
         public int GetPosition()
         {
-            int diff = (int)(TimeProvider.CurrentTimeMillis() - PlayerState.Timestamp);
-            return (int)(PlayerState.PositionAsOfTimestamp + diff);
+            int diff = (int) (TimeProvider.CurrentTimeMillis() - PlayerState.Timestamp);
+            return (int) (PlayerState.PositionAsOfTimestamp + diff);
         }
 
         public void SetPlaybackId(string playbackId) => PlayerState.PlaybackId = playbackId;
@@ -354,12 +370,14 @@ namespace SpotifyLibrary.Connect
             if (wasPaused && !paused) // Assume the position was set immediately before pausing
                 SetPosition(PlayerState.PositionAsOfTimestamp);
         }
+
         public void SetPosition(long pos)
         {
             PlayerState.Timestamp = TimeProvider.CurrentTimeMillis();
             PlayerState.PositionAsOfTimestamp = pos;
             PlayerState.Position = 0L;
         }
+
         public AbsSpotifyContext Context { get; private set; }
 
         public Task Updated(bool push = false)
@@ -375,24 +393,28 @@ namespace SpotifyLibrary.Connect
             if (Context == null) return;
 
             if (_tracksKeeper.IsPlayingFirst() && !IsRepeatingContext)
-                Context.Restrictions.Disallow(RestrictionsManager.Action.SKIP_PREV, RestrictionsManager.REASON_NO_PREV_TRACK);
+                Context.Restrictions.Disallow(RestrictionsManager.Action.SKIP_PREV,
+                    RestrictionsManager.REASON_NO_PREV_TRACK);
             else
                 Context.Restrictions.Allow(RestrictionsManager.Action.SKIP_PREV);
 
             if (_tracksKeeper.IsPlayingLast() && !IsRepeatingContext)
-                Context.Restrictions.Disallow(RestrictionsManager.Action.SKIP_NEXT, RestrictionsManager.REASON_NO_NEXT_TRACK);
+                Context.Restrictions.Disallow(RestrictionsManager.Action.SKIP_NEXT,
+                    RestrictionsManager.REASON_NO_NEXT_TRACK);
             else
                 Context.Restrictions.Allow(RestrictionsManager.Action.SKIP_NEXT);
 
             PlayerState.Restrictions = Context.Restrictions.ToProto();
             PlayerState.ContextRestrictions = Context.Restrictions.ToProto();
         }
+
         private string RenewSessionId()
         {
             var sessionId = GenerateSessionId();
             PlayerState.SessionId = sessionId;
             return sessionId;
         }
+
         private static string GenerateSessionId()
         {
             var bytes = new byte[16];
@@ -412,6 +434,7 @@ namespace SpotifyLibrary.Connect
             bytes[0] = 1;
             return bytes.BytesToHex().ToLowerInvariant();
         }
+
         private static string Base64UrlEncode(byte[] inputBytes)
         {
             // Special "url-safe" base64 encode.
@@ -524,10 +547,13 @@ namespace SpotifyLibrary.Connect
             return _tracksKeeper.Tracks[index].Metadata.ToDictionary(pair => pair.Key,
                 pair => pair.Value);
         }
+
         public ContextTrack GetCurrentTrack()
         {
             var index = PlayerState.Index.Track;
-            return _tracksKeeper == null || _tracksKeeper.Tracks.Count < index ? null : _tracksKeeper.Tracks[(int)index];
+            return _tracksKeeper == null || _tracksKeeper.Tracks.Count < index
+                ? null
+                : _tracksKeeper.Tracks[(int) index];
         }
 
         public async Task<string> Load(JObject obj)
@@ -535,8 +561,9 @@ namespace SpotifyLibrary.Connect
             var k = (PlayCommandHelper.GetPlayOrigin(obj) as JObject);
             PlayerState.PlayOrigin = ProtoUtils.JsonToPlayOrigin(k!);
             PlayerState.Options =
-                ProtoUtils.JsonToPlayerOptions((JObject)PlayCommandHelper.GetPlayerOptionsOverride(obj), PlayerState.Options);
-            var sessionId = SetContext(ProtoUtils.JsonToContext((JObject)PlayCommandHelper.GetContext(obj)));
+                ProtoUtils.JsonToPlayerOptions((JObject) PlayCommandHelper.GetPlayerOptionsOverride(obj),
+                    PlayerState.Options);
+            var sessionId = SetContext(ProtoUtils.JsonToContext((JObject) PlayCommandHelper.GetContext(obj)));
 
             var trackUid = PlayCommandHelper.GetSkipToUid(obj);
             var trackUri = PlayCommandHelper.GetSkipToUri(obj);
@@ -554,7 +581,7 @@ namespace SpotifyLibrary.Connect
             {
                 _tracksKeeper.InitializeFrom(list =>
                 {
-                    if (trackIndex < list.Count) return (int)trackIndex;
+                    if (trackIndex < list.Count) return (int) trackIndex;
                     return -1;
                 }, null, null);
             }
@@ -564,10 +591,54 @@ namespace SpotifyLibrary.Connect
             }
 
             var seekTo = PlayCommandHelper.GetSeekTo(obj);
-            if (seekTo != null) SetPosition((long)seekTo);
+            if (seekTo != null) SetPosition((long) seekTo);
             else SetPosition(0);
             await LoadTransforming();
             return sessionId;
         }
+
+        public NextPlayable NextPlayable(bool configAutoplayEnabled)
+        {
+            if (_tracksKeeper == null) return Connect.NextPlayable.MISSING_TRACKS;
+
+            try
+            {
+                return _tracksKeeper.NextPlayable(configAutoplayEnabled);
+            }
+            catch (Exception x)
+            {
+                Debug.Write("Failed fetching next playable." + x.ToString());
+                return Connect.NextPlayable.MISSING_TRACKS;
+            }
+        }
+
+        public (int Index, IAudioId Id)? NextPlayableDontSet()
+        {
+            try
+            {
+                var id = _tracksKeeper.NextPlayableDoNotSet();
+                return id;
+            }
+            catch (Exception x)
+            {
+                switch (x)
+                {
+                    case MercuryException:
+                        Debug.WriteLine("Failed fetching next playable." +  x.ToString());
+                        return null;
+                }
+            }
+            return null;
+        }
+
+    }
+
+    public enum NextPlayable
+    {
+        MISSING_TRACKS,
+        AUTOPLAY,
+        OK_PLAY,
+        OK_PAUSE,
+        OK_REPEAT
     }
 }

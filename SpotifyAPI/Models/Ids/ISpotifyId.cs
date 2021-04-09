@@ -1,4 +1,6 @@
 ﻿
+using MusicLibrary.Interfaces;
+
 namespace SpotifyLibrary.Models.Ids
 {
     public interface ISpotifyId : IAudioId

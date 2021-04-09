@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -16,6 +17,8 @@ using Org.BouncyCastle.Utilities;
 using SpotifyLibrary.Enum;
 using SpotifyLibrary.Helpers;
 using SpotifyLibrary.Helpers.Extensions;
+using SpotifyLibrary.Models.Ids;
+using SpotifyLibrary.Models.Playlists;
 using SpotifyLibrary.Services.Mercury.Interfaces;
 
 namespace SpotifyLibrary.Dealer
@@ -32,14 +35,18 @@ namespace SpotifyLibrary.Dealer
         private readonly ConcurrentDictionary<IMessageListener, List<string>> _msgListeners = new();
         private readonly ManualResetEvent _msgListenersLock = new(false);
 
-        private readonly ConcurrentDictionary<string, IRequestListener> _reqListeners = new();
+        public readonly ConcurrentDictionary<string, IRequestListener> ReqListeners = new();
         private readonly ManualResetEvent _reqListenersLock = new(false);
 
+        public readonly ConcurrentDictionary<string, IPlaylistListener> PlaylistListeners = new();
 
+        private string _userId;
         public DealerClient(
+            string userId,
             ITokensProvider tokenProvider,
             IWebsocketClient wsHandler)
         {
+            _userId = userId;
             _tokensProvider = tokenProvider;
             _webSocket = wsHandler;
         }
@@ -125,11 +132,11 @@ namespace SpotifyLibrary.Dealer
             Debug.WriteLine("Received request. mid: {0}, key: {1}, pid: {2}, sender: {3}", mid, key, pid, sender);
             var interesting = false;
 
-            foreach (var midprefix in _reqListeners.Keys)
+            foreach (var midprefix in ReqListeners.Keys)
             {
                 if (mid.StartsWith(midprefix))
                 {
-                    var listener = _reqListeners[midprefix];
+                    var listener = ReqListeners[midprefix];
                     interesting = true;
                     var result =
                         await Task.Run(() => listener.OnRequest(mid, pid, sender, (JObject)command));
@@ -177,29 +184,58 @@ namespace SpotifyLibrary.Dealer
                 }
                 else
                 {
-                    //    const playlistRegex = /hm:\/\/playlist\/v2\/playlist\/[\w\d]+/i;
-                    //var playlistRegEx = Regex.Match(uri, @"hm:\/\/playlist\/v2\/playlist\/[\w\d]+");
-                    //if (playlistRegEx.Success)
-                    //{
-                    //    var payloadsStr = new string[payloads.Count];
-                    //    for (var i = 0; i < payloads.Count; i++) payloadsStr[i] = payloads[i].ToString();
-                    //    //playlist/collection
-                    //    foreach (var payload in payloadsStr)
-                    //    {
-                    //        lock (_playlistListener)
-                    //        {
-                    //            foreach (var listener
-                    //                in _playlistListener)
-                    //            {
-                    //                if (!DecodeHermesPlaylist(payload, out var update)) continue;
-                    //               if (listener.Key.Equals(new PlaylistId(update.Playlist.Uri)))
-                    //                {
-                    //                   listener.Value.PlaylistUpdate(update);
-                    //                }
-                    //            }
-                    //        }
-                    //    }
-                    //}
+                    var playlistRegEx = Regex.Match(uri, 
+                        @"hm:\/\/playlist\/v2\/playlist\/[\w\d]+");
+                    if (playlistRegEx.Success)
+                    {
+                        var payloadsStr = new string[payloads.Count];
+                        for (var i = 0; i < payloads.Count; i++) payloadsStr[i] = payloads[i].ToString();
+                        //playlist/collection
+                        foreach (var payload in payloadsStr)
+                        {
+                            lock (PlaylistListeners)
+                            {
+                                foreach (var listener
+                                    in PlaylistListeners)
+                                {
+
+                                    var last = uri.Split('/').Last();
+                                    if (!DecodeHermesPlaylist(payload, last, out var update)) continue;
+
+
+                                    if (listener.Key.Equals("generic") || 
+                                        listener.Key.Equals(new PlaylistId(update.Playlist.Uri)))
+                                    {
+                                        listener.Value.PlaylistUpdate(update);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (uri == "hm://playlist/v2/user/7ucghdgquf6byqusqkliltwc2/rootlist")
+                        {
+                            var payloadsStr = new string[payloads.Count];
+                            for (var i = 0; i < payloads.Count; i++) payloadsStr[i] = payloads[i].ToString();
+                            //playlist/collection
+                            foreach (var payload in payloadsStr)
+                            {
+                                var bs = Convert.FromBase64String(payload);
+                                var revisionasBase64 = Spotify.Playlist4.Proto.PlaylistModificationInfo.Parser.ParseFrom(bs)
+                                    .NewRevision.ToBase64();
+                                var revisionid = new RevisionId(revisionasBase64);
+                                foreach (var listener
+                                    in PlaylistListeners)
+                                {
+                                    if (listener.Key.Equals("rootlist"))
+                                    {
+                                        listener.Value.RootlistUpdate(revisionid);
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
             else
@@ -242,24 +278,26 @@ namespace SpotifyLibrary.Dealer
             var headers = obj["headers"] as JObject;
             return headers.ToObject<Dictionary<string, string>>();
         }
-        //private static bool DecodeHermesPlaylist(string payload, out HermesPlaylistUpdate hermes)
-        //{
-        //    var bytes = Convert.FromBase64String(payload);
-        //    try
-        //    {
-        //        var modification = Spotify.Playlist4.Proto
-        //            .PlaylistModificationInfo.Parser.ParseFrom(bytes);
-        //        hermes = new HermesPlaylistUpdate(PlaylistId.FromHex(modification.Uri.ToByteArray().BytesToHex()),
-        //            modification.Ops);
-        //    }
-        //    catch (InvalidProtocolBufferException x)
-        //    {
-        //        Debug.WriteLine(x.ToString());
-        //        hermes = null;
-        //        return false;
-        //    }
-        //    return true;
-        //}
+        private static bool DecodeHermesPlaylist(string payload, 
+            string id, 
+            out HermesPlaylistUpdate hermes)
+        {
+            var bytes = Convert.FromBase64String(payload);
+            try
+            {
+                var modification = Spotify.Playlist4.Proto
+                    .PlaylistModificationInfo.Parser.ParseFrom(bytes);
+                hermes = new HermesPlaylistUpdate(new PlaylistId($"spotify:playlist:{id}"),
+                    modification.Ops);
+            }
+            catch (InvalidProtocolBufferException x)
+            {
+                Debug.WriteLine(x.ToString());
+                hermes = null;
+                return false;
+            }
+            return true;
+        }
 
         public void Dispose()
         {
@@ -286,7 +324,8 @@ namespace SpotifyLibrary.Dealer
             try
             {
                 await _webSocket.ConnectSocketAsync(new Uri(
-                    $"wss://{(await ApResolver.GetClosestDealerAsync()).Replace("https://", string.Empty)}/?access_token={(await _tokensProvider.GetToken("playlist-read")).AccessToken}"));
+                        $"wss://{(await ApResolver.GetClosestDealerAsync()).Replace("https://", string.Empty)}/?access_token={(await _tokensProvider.GetToken("playlist-read")).AccessToken}"))
+                    ;
                 return true;
             }
             catch (Exception x)
@@ -361,20 +400,20 @@ namespace SpotifyLibrary.Dealer
         }
         public void AddRequestListener([NotNull] IRequestListener listener, [NotNull] string uri)
         {
-            lock (_reqListeners)
+            lock (ReqListeners)
             {
-                if (_reqListeners.ContainsKey(uri))
+                if (ReqListeners.ContainsKey(uri))
                     throw new ArgumentException($"A listener for {uri} has already been added.");
 
-                _reqListeners.TryAdd(uri, listener);
+                ReqListeners.TryAdd(uri, listener);
                 _reqListenersLock.Reset();
             }
         }
         public void RemoveRequestListener([NotNull] IRequestListener listener)
         {
-            lock (_reqListeners)
+            lock (ReqListeners)
             {
-                _reqListeners.Values.Remove(listener);
+                ReqListeners.Values.Remove(listener);
             }
         }
     }

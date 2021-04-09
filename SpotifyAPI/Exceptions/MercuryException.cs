@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Diagnostics;
-using SpotifyLibrary.Models.Response;
 using SpotifyLibrary.Models.Response.Mercury;
 
 namespace SpotifyLibrary.Exceptions

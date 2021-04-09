@@ -1,11 +1,13 @@
 ﻿using System;
 using System.IO;
-using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace SpotifyLibrary.Helpers.Extensions
 {
     public static class StreamExtensions
     {
+   
         private static readonly int MAX_SKIP_BUFFER_SIZE = 2048;
 
         public static void ReadComplete(this Stream stream, byte[] buffer, int offset, int count)

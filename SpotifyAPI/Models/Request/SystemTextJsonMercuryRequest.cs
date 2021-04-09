@@ -1,12 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
 using JetBrains.Annotations;
-using SpotifyLibrary.Models.Response;
 using SpotifyLibrary.Models.Response.Mercury;
 
 namespace SpotifyLibrary.Models.Request
@@ -34,6 +31,7 @@ namespace SpotifyLibrary.Models.Request
                 if (typeof(T) == typeof(string))
                     return (T)(object)Encoding.UTF8.GetString(combined);
                 var data = System.Text.Json.JsonSerializer.Deserialize<T>(new ReadOnlySpan<byte>(combined), jsonSerializerOptions);
+                resp.Dispose();
                 return data;
             }
             catch (Exception x)

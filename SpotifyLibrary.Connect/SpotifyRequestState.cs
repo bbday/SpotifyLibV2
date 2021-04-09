@@ -11,7 +11,9 @@ using System.Threading.Tasks;
 using System.Web;
 using Connectstate;
 using Google.Protobuf;
+using Google.Protobuf.Collections;
 using JetBrains.Annotations;
+using MusicLibrary.Enum;
 using Newtonsoft.Json.Linq;
 using Org.BouncyCastle.Math.EC;
 using Spotify.Player.Proto.Transfer;
@@ -64,20 +66,21 @@ namespace SpotifyLibrary.Connect
             dealerClient.AddRequestListener(this,
                 "hm://connect-state/v1/");
         }
-
+        public bool IsActive { get; private set; }
         public RequestResult OnRequest(string mid,
             int pid,
             string sender,
             JObject command)
         {
-            PutStateRequest.LastCommandMessageId = (uint) pid;
+            PutStateRequest.LastCommandMessageId = (uint)pid;
             PutStateRequest.LastCommandSentByDeviceId = sender;
+            IsActive = true;
             var cmd = new CommandBody(command);
             var enumParsed = (command["endpoint"]?.ToString()).StringToEndPoint();
             switch (enumParsed)
             {
                 case Endpoint.Play:
-                    _ = HandlePlay(command); 
+                    _ = HandlePlay(command);
                     ConnectClient.OnPlaybackStateChanged(this, MediaPlaybackState.TrackStarted);
                     break;
                 case Endpoint.Pause:
@@ -86,13 +89,13 @@ namespace SpotifyLibrary.Connect
                     ConnectClient.OnPlaybackStateChanged(this, MediaPlaybackState.TrackPaused);
                     break;
                 case Endpoint.Resume:
-                    Player.Resume( -1);
+                    Player.Resume(-1);
                     ConnectClient.OnPlaybackStateChanged(this, MediaPlaybackState.TrackStarted);
                     break;
                 case Endpoint.SeekTo:
                     var pos = command["value"].ToObject<int>();
                     _stateWrapper.SetPosition(pos);
-                    Player.Seek(pos);
+                    Player.Seek(this, pos);
                     break;
                 case Endpoint.SkipNext:
                     break;
@@ -134,7 +137,7 @@ namespace SpotifyLibrary.Connect
                 case Endpoint.AddToQueue:
                     break;
                 case Endpoint.Transfer:
-                    _ =  HandleTransfer(TransferState.Parser.ParseFrom(cmd.Data));
+                    _ = HandleTransfer(TransferState.Parser.ParseFrom(cmd.Data));
                     break;
                 case Endpoint.Error:
                 default:
@@ -144,7 +147,51 @@ namespace SpotifyLibrary.Connect
             return RequestResult.Success;
         }
 
-        private async Task HandlePlay(JObject obj)
+        public async void NotActive()
+        {
+            IsActive = false;
+            var st = 
+                _stateWrapper.PlayerState;
+            st.Timestamp = 0L;
+            st.ContextUri = string.Empty;
+            st.ContextUrl = string.Empty;
+
+            st.ContextRestrictions = null;
+            st.PlayOrigin = null;
+            st.Index = null;
+            st.Track = null;
+            st.PlaybackId = string.Empty;
+            st.PlaybackSpeed = 0D;
+            st.PositionAsOfTimestamp = 0L;
+            st.Duration = 0L;
+            st.IsPlaying = false;
+            st.IsPaused = false;
+            st.IsBuffering = false;
+            st.IsSystemInitiated = false;
+
+            st.Options = null;
+            st.Restrictions = null;
+            st.Suppressions = null;
+            st.PrevTracks.Clear();
+            st.NextTracks.Clear();
+            st.ContextMetadata.Clear();
+            st.PageMetadata.Clear();
+            st.SessionId = string.Empty;
+            st.QueueRevision = string.Empty;
+            st.Position = 0L;
+            st.EntityUri = string.Empty;
+
+            st.Reverse.Clear();
+            st.Future.Clear();
+
+            LocalStateWrapper.InitState(st);
+            SetIsActive(false);
+            await UpdateState(PutStateReason.BecameInactive, (int)Player.Position.TotalMilliseconds);
+            
+            Debug.WriteLine($"Notified inactivity");
+        }
+
+        public async Task HandlePlay(JObject obj)
         {
             Debug.WriteLine($"Loading context (play), uri: {PlayCommandHelper.GetContextUri(obj)}");
 
@@ -177,7 +224,7 @@ namespace SpotifyLibrary.Connect
             try
             {
                 var sessionId = await
-                    _stateWrapper.Transfer(transferData); 
+                    _stateWrapper.Transfer(transferData);
 
                 await LoadSession(sessionId, !transferData.Playback.IsPaused, true);
                 ConnectClient.OnNewPlaybackWrapper(this, _stateWrapper.PlayerState);
@@ -210,8 +257,8 @@ namespace SpotifyLibrary.Connect
 
             var transitionInfo = TransitionInfo.ContextChange(_stateWrapper, withSkip);
 
-            _playerSession = new PlayerSession.PlayerSession(Player, ConnectClient.Client.Config, 
-                sessionId, this, 
+            _playerSession = new PlayerSession.PlayerSession(Player, ConnectClient.Client.Config,
+                sessionId, this,
                 _cdnManager);
             //_events.SendEvent(new NewSessionIdEvent(sessionId, _stateWrapper).BuildEvent());
 
@@ -232,7 +279,7 @@ namespace SpotifyLibrary.Connect
 
             //await _stateWrapper.Updated();
 
-             if (willPlay) Player.Resume(_stateWrapper.Position);
+            if (willPlay) Player.Resume(_stateWrapper.Position);
             else Player.Pause();
         }
 
@@ -252,6 +299,20 @@ namespace SpotifyLibrary.Connect
             if (_connectionId != null && _connectionId.Equals(conId)) return;
 
             _connectionId = conId;
+
+            _putclient = new HttpClient(new HttpClientHandler
+            {
+                AutomaticDecompression = DecompressionMethods.GZip
+            })
+            {
+                BaseAddress = new Uri((await ApResolver.GetClosestSpClient()))
+            };
+            _putclient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer",
+                (await Client.Tokens.GetToken("playlist-read")).AccessToken);
+            _putclient.DefaultRequestHeaders.Add("X-Spotify-Connection-Id", _connectionId);
+
+
+
             Debug.WriteLine("Updated Spotify-Connection-Id: " + _connectionId);
             _stateWrapper.PlayerState.IsSystemInitiated = true;
             var data = await
@@ -259,6 +320,7 @@ namespace SpotifyLibrary.Connect
 
             var tryGet =
                 Connectstate.Cluster.Parser.ParseFrom(data);
+            ConnectClient.OnNewCluster(tryGet);
             if (tryGet?.PlayerState?.Track != null)
                 ConnectClient.OnNewPlaybackWrapper(this, tryGet.PlayerState);
         }
@@ -371,9 +433,32 @@ namespace SpotifyLibrary.Connect
 
         public ISpotifyId NextPlayable()
         {
-            throw new NotImplementedException();
+            var next = _stateWrapper.NextPlayable(Client.Config.AutoplayEnabled);
+            if (next == Connect.NextPlayable.AUTOPLAY)
+            {
+                //LoadAutoplay();
+                return null;
+            }
+
+            if (IsOk(next))
+            {
+                if (next != Connect.NextPlayable.OK_PLAY && next != Connect.NextPlayable.OK_REPEAT)
+                {
+                    Player.Pause();
+                }
+
+                return _stateWrapper.GetPlayableItem;
+            }
+            else
+            {
+                Debug.WriteLine("Failed loading next song: " + next);
+                return null;
+            }
         }
 
+        public bool IsOk(NextPlayable pl) => pl == Connect.NextPlayable.OK_PLAY ||
+                                             pl == Connect.NextPlayable.OK_PAUSE ||
+                                             pl == Connect.NextPlayable.OK_REPEAT;
         public ISpotifyId NextPlayableDoNotSet()
         {
             throw new NotImplementedException();
@@ -386,7 +471,7 @@ namespace SpotifyLibrary.Connect
         {
             Debug.WriteLine("Playback halted on retrieving chunk {0}.", chunk);
             _stateWrapper.SetBuffering(true);
-          //  await _stateWrapper.Updated();
+            //  await _stateWrapper.Updated();
         }
 
         public async void PlaybackResumedFromHalt(int chunk, long diff)
@@ -394,7 +479,7 @@ namespace SpotifyLibrary.Connect
             Debug.WriteLine("Playback resumed, chunk {0} retrieved, took {1}ms.", chunk, diff);
             _stateWrapper.SetPosition(_stateWrapper.Position - diff);
             _stateWrapper.SetBuffering(true);
-           // await _stateWrapper.Updated();
+            // await _stateWrapper.Updated();
         }
 
         public async void StartedLoading()
@@ -416,7 +501,7 @@ namespace SpotifyLibrary.Connect
         {
             _stateWrapper.EnrichWithMetadata(metadata);
             _stateWrapper.SetBuffering(false);
-          //  await _stateWrapper.Updated(false);
+            //  await _stateWrapper.Updated(false);
         }
 
         public void PlaybackError(Exception ex)
@@ -426,12 +511,15 @@ namespace SpotifyLibrary.Connect
 
         public void TrackChanged(string playbackId, TrackOrEpisode metadata, int pos, TransitionReason startedReason)
         {
-            throw new NotImplementedException();
+            if (metadata.track != null || metadata.episode != null) _stateWrapper.EnrichWithMetadata(metadata);
+            _stateWrapper.SetPlaybackId(playbackId);
+            _stateWrapper.SetPosition(pos);
+            ConnectClient.OnNewPlaybackWrapper(this, _stateWrapper.PlayerState);
         }
 
         public void TrackPlayed(string playbackId, TransitionReason endReason, int endedAt)
         {
-            throw new NotImplementedException();
+          
         }
 
         public void SetIsActive(bool b)

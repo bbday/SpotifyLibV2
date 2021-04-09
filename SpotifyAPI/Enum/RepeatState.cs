@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using SpotifyLibrary.Attributes;
+﻿using SpotifyLibrary.Attributes;
 
 namespace SpotifyLibrary.Enum
 {

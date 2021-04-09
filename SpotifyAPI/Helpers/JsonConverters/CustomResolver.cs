@@ -1,8 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
+using MusicLibrary.Interfaces;
 using Newtonsoft.Json.Serialization;
-using SpotifyLibrary.Models.Response.Interfaces;
+using SpotifyLibrary.Models.Response.Mercury.Apollo;
 
 namespace SpotifyLibrary.Helpers.JsonConverters
 {
@@ -10,10 +9,16 @@ namespace SpotifyLibrary.Helpers.JsonConverters
     {
         protected override JsonObjectContract CreateObjectContract(Type objectType)
         {
-            JsonObjectContract contract = base.CreateObjectContract(objectType);
+            var contract = base.CreateObjectContract(objectType);
+            
+
             if (objectType == typeof(IAudioItem))
             {
                 contract.Converter = new SpotifyItemConverter();
+            }
+            else if(objectType == typeof(IApolloHubItem))
+            {
+                contract.Converter = new ApolloConverter();
             }
             return contract;
         }

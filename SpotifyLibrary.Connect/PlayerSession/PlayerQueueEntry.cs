@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 using System.Threading.Tasks;
+using MusicLibrary.Enum;
 using SpotifyLibrary.Audio;
+using SpotifyLibrary.Connect.Enums;
 using SpotifyLibrary.Connect.Player;
 using SpotifyLibrary.Connect.Qualities;
 using SpotifyLibrary.Connect.Transitions;
@@ -29,6 +31,21 @@ namespace SpotifyLibrary.Connect.PlayerSession
             _listener = listener;
             _cdnManager = cdnManager;
             PlaybackId = LocalStateWrapper.GeneratePlaybackId();
+
+            player.StateChanged -= StateChanged;
+            player.StateChanged += StateChanged;
+        }
+
+        private void StateChanged(MediaPlaybackState state, TrackOrEpisode metadata)
+        {
+            switch (state)
+            {
+                case MediaPlaybackState.NewTrack:
+                    break;
+                case MediaPlaybackState.TrackPlayed: 
+                    _listener.PlaybackEnded(this);
+                    break;
+            }
         }
 
         public async Task Start()
@@ -43,6 +60,8 @@ namespace SpotifyLibrary.Connect.PlayerSession
                     this);
                 Metadata = new TrackOrEpisode(currentStream.Track, currentStream.Episode);
                 Debug.WriteLine($"Loaded item... {Id.Id}");
+
+
 
                 await _player.StreamReady(currentStream);
             }

@@ -1,12 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Collections.Generic;
 using System.Text.Json.Serialization;
-using SpotifyLibrary.Enum;
-using SpotifyLibrary.Models.Enums;
+using MusicLibrary.Enum;
+using MusicLibrary.Interfaces;
+using MusicLibrary.Models;
 using SpotifyLibrary.Models.Ids;
-using SpotifyLibrary.Models.Response.Interfaces;
-using SpotifyLibrary.Models.Response.SpotifyItems;
 
 namespace SpotifyLibrary.Models.Response.Mercury
 {

@@ -11,6 +11,8 @@ using System.Web;
 using Connectstate;
 using Google.Protobuf;
 using JetBrains.Annotations;
+using MusicLibrary.Enum;
+using MusicLibrary.Interfaces;
 using Nito.AsyncEx;
 using SpotifyLibrary.Configs;
 using SpotifyLibrary.Connect.Enums;
@@ -21,8 +23,9 @@ using SpotifyLibrary.Helpers;
 using SpotifyLibrary.Helpers.Extensions;
 using SpotifyLibrary.Models;
 using SpotifyLibrary.Models.Ids;
+using SpotifyLibrary.Models.Request.Playback;
 using SpotifyLibrary.Models.Response;
-using SpotifyLibrary.Models.Response.Interfaces;
+using SpotifyLibrary.Models.Response.SpotifyItems;
 using SpotifyLibrary.Player;
 using SpotifyLibrary.Services.Mercury;
 using SpotifyLibrary.Services.Mercury.Interfaces;
@@ -63,7 +66,7 @@ namespace SpotifyLibrary.Connect
         public event EventHandler<bool> ShuffleStateChanged;
         public event EventHandler<double> PositionChanged;
         public event EventHandler<RepeatState> RepeatStateChanged;
-
+        public event EventHandler<List<IQueueUpdateItem>> QueueUpdated;
         public DealerClient DealerClient
         {
             get => _dealerClient;
@@ -71,7 +74,7 @@ namespace SpotifyLibrary.Connect
             {
                 _dealerClient = value;
                 _request = new SpotifyRequestState(value, this);
-                _messages = new SpotifyMessageState(value, this);
+                _messages = new SpotifyMessageState(value, _request, this);
             }
         }
 
@@ -83,6 +86,74 @@ namespace SpotifyLibrary.Connect
         public ManualResetEvent WaitForConnectionId
         {
             get { return _waitForConid ??= new ManualResetEvent(false); }
+        }
+
+        public string CurrentDevice => _request.IsActive 
+            ? _client.Config.DeviceId : _messages.CurrentDeviceId;
+
+        public async Task<AcknowledgedResponse> InvokeCommandOnRemoteDevice(RemoteCommand playbackState,
+            string deviceId = null)
+        {
+            var connetState = await Client.ConnectState;
+            switch (playbackState)
+            {
+                case RemoteCommand.Pause:
+                    return await connetState.Command(Client.Config.DeviceId, deviceId ?? CurrentDevice, new
+                    {
+                        command = new
+                        {
+                            endpoint = "pause"
+                        }
+                    });
+                case RemoteCommand.Play:
+                    return await connetState.Command(Client.Config.DeviceId, deviceId ?? CurrentDevice, new
+                    {
+                        command = new
+                        {
+                            endpoint = "resume"
+                        }
+                    });
+                    break;
+                case RemoteCommand.Skip:
+                    break;
+                case RemoteCommand.Previous:
+                    break;
+                case RemoteCommand.ShuffleToggle:
+                    break;
+                case RemoteCommand.RepeatContext:
+                    break;
+                case RemoteCommand.RepeatTrack:
+                    break;
+                case RemoteCommand.RepeatOff:
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(playbackState), playbackState, null);
+            }
+            throw new ArgumentOutOfRangeException(nameof(playbackState), playbackState, null);
+        }
+
+        public async Task<AcknowledgedResponse> PlayItem(string connectClientCurrentDevice,
+            IPlayRequest request)
+        {
+            var connetState = await Client.ConnectState;
+
+            return await connetState.Command(Client.Config.DeviceId, connectClientCurrentDevice ?? CurrentDevice, request.GetModel()); ;
+        }
+
+        public async Task<AcknowledgedResponse> Seek(double delta,
+            string deviceId = null)
+        {
+            var connetState = await Client.ConnectState;
+
+            return await connetState.Command(Client.Config.DeviceId, 
+                deviceId ?? CurrentDevice, new
+            {
+                command = new
+                {
+                    endpoint = "seek_to",
+                    value = delta
+                }
+            });
         }
 
         internal void OnRepeatStateChanged(object sender, RepeatState state)
@@ -115,9 +186,13 @@ namespace SpotifyLibrary.Connect
             }
             PlaybackStateChanged?.Invoke(sender, newState);
         }
-
-        internal async void OnNewPlaybackWrapper(object sender, PlayerState state)
+        internal void OnNewCluster(Cluster state)
         {
+            _messages.PreviousCluster = state;
+        }
+        public async void OnNewPlaybackWrapper(object sender, PlayerState state)
+        {
+
             var newWrapper = await LocalStateToWrapper(state);
             LastReceivedCluster = newWrapper;
 
@@ -168,12 +243,21 @@ namespace SpotifyLibrary.Connect
                         var tracksClient = await _client.TracksClient;
                         var fullTrack = await tracksClient.GetTrack(itemId.Id);
                         descriptions.AddRange(fullTrack.Artists.Select(z =>
-                            new Descriptions(z.Name, new ArtistId(z.Uri))));
+                            new Descriptions(z.Name, new ArtistId((z as SimpleArtist).Uri))));
                         durationMs = fullTrack.DurationMs;
                         item = fullTrack;
-                        groupId = fullTrack.Album.Id;
+                        groupId = fullTrack.Group.Id;
                         break;
                     case AudioType.Episode:
+                        var episodesClient = await _client.EpisodesClient;
+                        var fullEpisode = await episodesClient.GetEpisode(itemId.Id);
+                        descriptions.AddRange(new Descriptions[]
+                        {
+                            new Descriptions(fullEpisode.Show.Name, fullEpisode.Show.Id)
+                        });
+                        durationMs = fullEpisode.DurationMs;
+                        item = fullEpisode;
+                        groupId = fullEpisode.Show.Id;
                         break;
                     default:
                         throw new NotImplementedException("?");
@@ -189,6 +273,11 @@ namespace SpotifyLibrary.Connect
                 LastReceivedCluster = clustered;
                 return clustered;
             }
+        }
+
+        public void OnNewItemsInQueue(object sender, List<IQueueUpdateItem> items)
+        {
+            QueueUpdated?.Invoke(sender, items);
         }
     }
 }

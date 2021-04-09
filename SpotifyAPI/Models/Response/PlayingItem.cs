@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using MusicLibrary.Interfaces;
 using SpotifyLibrary.Enum;
-using SpotifyLibrary.Models.Ids;
-using SpotifyLibrary.Models.Response.Interfaces;
 using SpotifyLibrary.Services.Mercury;
 
 namespace SpotifyLibrary.Models.Response

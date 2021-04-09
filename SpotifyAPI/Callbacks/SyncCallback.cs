@@ -1,5 +1,4 @@
 ﻿using System.Threading;
-using SpotifyLibrary.Models.Response;
 using SpotifyLibrary.Models.Response.Mercury;
 
 namespace SpotifyLibrary.Callbacks

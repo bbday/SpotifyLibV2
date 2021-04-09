@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Text.Json.Serialization;
-using SpotifyLibrary.Models.Response.Interfaces;
+using MusicLibrary.Enum;
+using MusicLibrary.Interfaces;
 
 namespace SpotifyLibrary.Models.Response.Mercury
 {
-    public class DiscographyTrack : PlaycountedTrack, ITrackItem
+    public class DiscographyTrack : PlaycountedTrack, IAlbumTrack
     {
 
         /// <summary>
@@ -42,7 +42,7 @@ namespace SpotifyLibrary.Models.Response.Mercury
         [JsonPropertyName("artists")]
         public IEnumerable<QuickArtist> Artists { get; set; }
 
-        public int DiscNumber { get; set; }
+        public short DiscNumber { get; set; }
 
         public TimeSpan? DurationTs => TimeSpan.FromMilliseconds(DurationMs);
 
@@ -51,5 +51,9 @@ namespace SpotifyLibrary.Models.Response.Mercury
 
         public override string Description => string.Join(", ", 
             Artists.Select(z => z.Name));
+
+        public TrackType TrackType => TrackType.AlbumTrack;
+        public int Index => Number; 
+        public bool IsDownloaded { get; set; }
     }
 }

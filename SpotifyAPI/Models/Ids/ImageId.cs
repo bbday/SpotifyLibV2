@@ -1,14 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
 using Connectstate;
 using Google.Protobuf;
 using JetBrains.Annotations;
-using SpotifyLibrary.Enum;
+using MusicLibrary.Enum;
 using SpotifyLibrary.Helpers.Extensions;
-using SpotifyLibrary.Models.Enums;
 using SpotifyProto;
 
 namespace SpotifyLibrary.Models.Ids

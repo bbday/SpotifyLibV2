@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using SpotifyLibrary.Enum;
-using SpotifyLibrary.Models.Enums;
+using MusicLibrary.Enum;
+using MusicLibrary.Interfaces;
 
 namespace SpotifyLibrary.Models.Ids
 {
@@ -30,7 +27,7 @@ namespace SpotifyLibrary.Models.Ids
         {
             return HashCode.Combine((int)AudioType, Uri);
         }
-        public bool Equals(IAudioId other)
+        public virtual bool Equals(IAudioId other)
         {
             if (other is T genid)
             {
@@ -46,5 +43,6 @@ namespace SpotifyLibrary.Models.Ids
 
         public abstract string ToMercuryUri(string locale);
         public abstract string ToHexId();
+        public override string ToString() => Uri;
     }
 }

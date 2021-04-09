@@ -16,6 +16,8 @@
 # Mono auto generated files
 mono_crash.*
 
+MusicLibarry/bin
+MusicLibarry/obj
 
 SpotifyLibrary.ConsoleTest/
 SpotifyUWPV4/

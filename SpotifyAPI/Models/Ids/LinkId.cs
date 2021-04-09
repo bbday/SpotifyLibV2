@@ -1,15 +1,24 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
+using MusicLibrary.Enum;
+using MusicLibrary.Interfaces;
 using SpotifyLibrary.Enum;
-using SpotifyLibrary.Models.Enums;
 
 namespace SpotifyLibrary.Models.Ids
 {
     public class LinkId : ISpotifyId
     {
+        public LinkId(string uri, string sectionId)
+
+        {
+            Uri = uri;
+            IdType = AudioService.Spotify;
+            AudioType = AudioType.Link;
+            LinkType = LinkType.Genre;
+            GenreType = sectionId;
+        }
+
         public LinkId(string uri) 
         
         {
@@ -21,10 +30,12 @@ namespace SpotifyLibrary.Models.Ids
             {
                 (new Regex($"spotify:collection:tracks"), LinkType.CollectionTracks),
                 (new Regex("spotify:user:(.*):collection"), LinkType.CollectionTracks),
-                (new Regex($"spotify:genre:(.*)"), LinkType.Genre)
+                (new Regex($"spotify:genre:(.*)"), LinkType.Genre),
+                (new Regex($"spotify:app:genre:(.*)"), LinkType.Genre),
+                (new Regex(""), LinkType.Unknown)
             };
             var firstMatch = regexMatches.FirstOrDefault(z 
-                => z.Item1.Match(uri).Success);
+                => z.Item1.Match(uri ?? "").Success);
             if (firstMatch.Item1 != null)
             {
                 LinkType = firstMatch.CollectionTracks;

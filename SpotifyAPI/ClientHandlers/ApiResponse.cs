@@ -14,7 +14,7 @@ namespace SpotifyLibrary.ClientHandlers
                 message.Headers.ToDictionary(z => z.Key,
                     z => z.Value);
             StatusCode = message.StatusCode;
-            ContentType = message.Content.Headers.ContentType.ToString();
+            ContentType = message.Content.Headers.ContentType?.ToString();
             Body = message.Content;
         }
 

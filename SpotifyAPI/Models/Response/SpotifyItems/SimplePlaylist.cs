@@ -1,12 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Collections.Generic;
+using MusicLibrary.Enum;
+using MusicLibrary.Interfaces;
+using MusicLibrary.Models;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using SpotifyLibrary.Enum;
-using SpotifyLibrary.Models.Enums;
+using Newtonsoft.Json.Linq;
 using SpotifyLibrary.Models.Ids;
-using SpotifyLibrary.Models.Response.Interfaces;
 
 namespace SpotifyLibrary.Models.Response.SpotifyItems
 {
@@ -26,9 +25,37 @@ namespace SpotifyLibrary.Models.Response.SpotifyItems
 
         private IAudioId __id;
 
-        [JsonConverter(typeof(StringEnumConverter))]
-        public AudioType Type { get; set; }
-        public List<UrlImage> Images { get; set; }
+        public AudioType Type => AudioType.Playlist;
+        private List<UrlImage> _images;
+
+        public SimplePlaylist(JObject jsonObject)
+        {
+            var followerCount = jsonObject["followersCount"]?.ToObject<int>();
+            var author = jsonObject["author"]?.ToString();
+            Description = $"{followerCount:#,##0} followers • {author}";
+        }
+
+        public List<UrlImage> Images
+        {
+            get
+            {
+                if (_images == null)
+                {
+                    if (Image != null)
+                        _images = new List<UrlImage>(1)
+                        {
+                            new UrlImage
+                            {
+                                Url = Image
+                            }
+                        };
+                }
+
+                return _images;
+            }
+            set => _images = value;
+        }
+        public string Image { get; set; }
         public string Name { get; set; }
         public string Description { get; set; }
         public string Href { get; set; }

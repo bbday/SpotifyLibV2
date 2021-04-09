@@ -9,5 +9,7 @@ namespace SpotifyLibrary.Audio
     {
         Task<StorageResolveResponse> ResolveStorageInteractive([NotNull] ByteString fileId,
             bool preload);
+
+        Task<StorageResolveResponse> Fetchoffline([NotNull] ByteString fileid);
     }
 }

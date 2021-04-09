@@ -5,7 +5,6 @@ using System.Linq;
 using System.Text;
 using JetBrains.Annotations;
 using Newtonsoft.Json;
-using SpotifyLibrary.Models.Response;
 using SpotifyLibrary.Models.Response.Mercury;
 
 namespace SpotifyLibrary.Models.Request

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Net.Http;
-using SpotifyLibrary.Connect.Enums;
-using SpotifyLibrary.Enum;
+using MusicLibrary.Enum;
 using SpotifyLibrary.Models;
 
 namespace SpotifyLibrary
