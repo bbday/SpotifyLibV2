@@ -1,5 +1,59 @@
 # SpotifyLib
 
+## Features
+
+- Full accesss to all spotify api endpoints. Both REST & Mercury
+- Connect client 
+- Play audio
+- Cross platform (.NET Standard)
+
+
+## Examples
+
+### Authentication & Bearer
+
+All REST Clients and other clients are LazyLoaded, which means they are not fetched/initialized until the developer specifically requests them. 
+
+You can create a new instance of the class ```SpotifyClient```.
+The parameter ```ICacheManager``` is **optional**. (The developer has to implement this themselves.)
+
+The ```SpotifyClient.Authenticate``` function accepts a parameter of type: ```SpotifyConfiguration```
+Which accepts the following paramemters
+
+- Type: IAuthenticator:
+-- Out of the box there are 2 implementations you can directly use. For userpass use ```UserPassAuthenticator```
+
+```
+var newSpotifyClient = new SpotifyClient();
+
+var userDataAuthenticator = new UserPassAuthenticator(USERNAME, PASSWORD);
+var newConfiguration = new SpotifyConfiguration(userDataAuthenticator, DEVICENAME);
+var authenticationResultTask = newSpotifyClient.Authenticate(newConfiguration, false);
+```
+
+```SpotifyClient.Authenticate``` returns ```Task<SpotifyConnectionResult>``` which contains the fields :
+
+- Success : **bool** Boolean indicating if authentication was successfull.
+- Message : **string**  Message if authentication failed.
+- ApWelcome : **APWelcome** ONLY FILLED IF AUTHENTICATION WAS SUCCESSFULL
+- ApFailed : **APFailed** ONLY FILLED IF AUTHENTICATION FAILED
+
+Once authentication was successfull, you can proceed to generate a bearer token using:
+```SpotifyClient.Tokens.GetToken()```
+
+```
+var tokensClient = newSpotifyClient.Tokens;
+var myBearerKey = tokensClient.GetToken("playlist-read")
+```
+
+All bearer keys are valid for 1 hour and are reused. 
+
+### Be careful!
+
+```GetToken()``` returns an instance of type ```StoredToken``` which has the field : ```AccessToken```.
+```StoredToken``` also implements ToString() so it may look like it is the actual bearer, but it is not.
+
+## ABOUT
 a .NET Standard implementation of spotify.
 
 Implements a Mercury client to communicate with the hm:// endpoints used by the spotify desktop client.
