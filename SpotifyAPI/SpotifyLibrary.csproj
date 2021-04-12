@@ -29,9 +29,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\..\Documents\SpotifyLibrary.Sql\SpotifyLibrary.Sql.csproj" />
     <ProjectReference Include="..\MusicLibrary\MusicLibrary.csproj" />
-    <ProjectReference Include="..\SpotifyLibrary.Protobufs\SpotifyLibrary.Models.csproj" />
+    <ProjectReference Include="..\SpotifyLibrary.Protobufs\SpotifyLibrary.Protobufs.csproj" />
+    <ProjectReference Include="..\SpotifyLibrary.Sql\SpotifyLibrary.Sql.csproj" />
   </ItemGroup>
 
 </Project>
