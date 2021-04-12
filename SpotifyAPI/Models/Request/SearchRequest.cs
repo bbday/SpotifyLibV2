@@ -28,7 +28,7 @@ namespace SpotifyLibrary.Models.Request
             string locale,
             string name,
             SearchType type,
-            int limit = 10)
+            int limit = 4)
         {
             this._query = query.Trim();
             Limit = limit;

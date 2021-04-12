@@ -24,7 +24,7 @@ namespace SpotifyLibrary.Models.Request
             params AudioType[] types) 
         {
             Query = q;
-            Type = string.Join(",", types);
+            Type = string.Join(",", types).ToLowerInvariant();
             Offset = offset;
             Limit = limit;
             Market = "from_token";

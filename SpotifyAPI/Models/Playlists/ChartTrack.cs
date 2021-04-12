@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Windows.Input;
 using MusicLibrary.Enum;
 using MusicLibrary.Interfaces;
 using MusicLibrary.Models;
@@ -28,6 +29,6 @@ namespace SpotifyLibrary.Models.Playlists
         public int Index { get; }
         public DateTime AddedOn { get; }
         public string AddedBy { get; }
-        public bool IsDownloaded { get; set; }
+        public ICommand PlayCommand { get; set; }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using Connectstate;
@@ -62,7 +63,14 @@ namespace SpotifyLibrary.Helpers
             {
                 var uri = obj["uri"].ToString();
                 b.Uri = uri;
-                b.Gid = ByteString.CopyFrom(Utils.HexToBytes(PlayableId.FromUri(uri).ToHexId()));
+                try
+                {
+                    b.Gid = ByteString.CopyFrom(Utils.HexToBytes(PlayableId.FromUri(uri).ToHexId()));
+                }
+                catch (Exception x)
+                {
+                    Debug.WriteLine($"Error for id.. {x.Message}");
+                }
             }
 
             if (!string.IsNullOrEmpty(obj["uid"]?.ToString()))

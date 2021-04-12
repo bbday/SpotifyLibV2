@@ -4,6 +4,8 @@
     {
         AlbumTrack,
         PlaylistTrack,
-        ChartTrack
+        ChartTrack,
+        SearchTrack,
+        SearchOverviewTrack
     }
 }

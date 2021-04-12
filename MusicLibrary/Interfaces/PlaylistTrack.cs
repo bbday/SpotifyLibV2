@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Windows.Input;
 
 namespace MusicLibrary.Interfaces
 {
@@ -6,5 +7,7 @@ namespace MusicLibrary.Interfaces
     {
         DateTime AddedOn { get;  }
         string AddedBy { get; }
+
+        ICommand PlayCommand { get; set; }
     }
 }

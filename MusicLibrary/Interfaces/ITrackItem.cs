@@ -17,6 +17,5 @@ namespace MusicLibrary.Interfaces
     public interface IAlbumTrack : ITrackItem
     {
         int Index { get; }
-        bool IsDownloaded { get; set; }
     }
 }

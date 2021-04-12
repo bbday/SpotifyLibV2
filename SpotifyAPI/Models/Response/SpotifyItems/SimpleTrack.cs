@@ -9,6 +9,7 @@ using Newtonsoft.Json;
 using SpotifyLibrary.Helpers.JsonConverters;
 using SpotifyLibrary.Models.Ids;
 using SpotifyLibrary.Models.Response.Mercury;
+using SpotifyProto;
 
 namespace SpotifyLibrary.Models.Response.SpotifyItems
 {
@@ -16,6 +17,7 @@ namespace SpotifyLibrary.Models.Response.SpotifyItems
         ISpotifyItem, 
         IAlbumTrack
     {
+
         private string _description;
         private List<UrlImage> _images;
         public string Image { get; set; }

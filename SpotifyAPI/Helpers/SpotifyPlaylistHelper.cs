@@ -313,7 +313,7 @@ namespace SpotifyLibrary.Helpers
                     StringAttribute.GetValue(typeof(PlaylistType), type, out var topStringInspired);
                     headerItem = new PlaylistNormalHeader(playlistdata.Id, playlistdata.Name,
                         playlistdata.Description,
-                        playlistdata.Images?.FirstOrDefault()?.Url,
+                        playlistdata.Images?.FirstOrDefault().Url,
                         topStringInspired, inspiredByCaptions,
                         folCount);
                     break;
@@ -332,7 +332,7 @@ namespace SpotifyLibrary.Helpers
                     StringAttribute.GetValue(typeof(PlaylistType), type, out var topStringCaption);
                     headerItem = new PlaylistNormalHeader(playlistdata.Id, playlistdata.Name,
                         playlistdata.Description,
-                        playlistdata.Images?.FirstOrDefault()?.Url,
+                        playlistdata.Images?.FirstOrDefault().Url,
                         topStringCaption, captionItems,
                         folCount);
                     break;
@@ -366,7 +366,7 @@ namespace SpotifyLibrary.Helpers
 
                         headerItem = new PlaylistNormalHeader(playlistdata.Id, playlistdata.Name,
                             playlistdata.Description,
-                            playlistdata.Images?.FirstOrDefault()?.Url,
+                            playlistdata.Images?.FirstOrDefault().Url,
                             formatted, captionItems2, folCount);
                     }
                     else
@@ -390,7 +390,7 @@ namespace SpotifyLibrary.Helpers
                             };
                             headerItem = new PlaylistBigHeader(playlistdata.Id, playlistdata.Name,
                                 playlistdata.Description,
-                                playlistdata.Images?.FirstOrDefault()?.Url,
+                                playlistdata.Images?.FirstOrDefault().Url,
                                 headerUrl,
                                 normal, bigCaptions, folCount);
                         }
@@ -405,7 +405,7 @@ namespace SpotifyLibrary.Helpers
                             };
                             headerItem = new PlaylistNormalHeader(playlistdata.Id, playlistdata.Name,
                                 playlistdata.Description,
-                                playlistdata.Images?.FirstOrDefault()?.Url,
+                                playlistdata.Images?.FirstOrDefault().Url,
                                 normal, normalCaptions, folCount);
                         }
                     }

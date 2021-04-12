@@ -63,7 +63,6 @@ namespace SpotifyLibrary.Helpers.JsonConverters
                 _ => new EmptyItem(jsonObject)
             };
             serializer.Populate(jsonObject.CreateReader(), item);
-
             return item;
         }
         public override bool CanConvert(Type objectType)

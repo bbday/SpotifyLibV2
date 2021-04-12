@@ -54,7 +54,8 @@ namespace SpotifyLibrary.Helpers
 
         public static ISpotifyId FromUri([NotNull] string uri)
         {
-            if (!IsSupported(uri)) throw new Exception("Unsupported id.");
+            if (!IsSupported(uri)) 
+                throw new Exception("Unsupported id.");
 
             if (uri.Split(':')[1] == "track") return new TrackId(uri);
             if (uri.Split(':')[1] == "episode")

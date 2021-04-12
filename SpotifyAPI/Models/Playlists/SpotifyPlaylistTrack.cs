@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Windows.Input;
 using JetBrains.Annotations;
 using MusicLibrary.Enum;
 using MusicLibrary.Interfaces;
@@ -23,7 +24,7 @@ namespace SpotifyLibrary.Models.Playlists
         private IAudioItem _group;
         private List<IAudioItem> _artists;
         private string _description;
-        private bool _isDownloaded;
+        private ICommand _playCommand;
 
         public SpotifyPlaylistTrack(DbTrack dbTrack,
             int index,
@@ -90,15 +91,16 @@ namespace SpotifyLibrary.Models.Playlists
         public DateTime AddedOn { get; }
         public string AddedBy { get; }
 
-        public bool IsDownloaded
+        public ICommand PlayCommand
         {
-            get => _isDownloaded;
+            get => _playCommand;
             set
             {
-                _isDownloaded = value;
-                OnPropertyChanged(nameof(IsDownloaded));
+                _playCommand = value;
+                OnPropertyChanged(nameof(PlayCommand));
             }
         }
+
         public TrackType TrackType { get; }
         public TimeSpan? DurationTs { get; }
         public IAudioItem Group

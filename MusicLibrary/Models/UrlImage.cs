@@ -4,7 +4,7 @@ using System.Text;
 
 namespace MusicLibrary.Models
 {
-    public class UrlImage
+    public struct UrlImage
     {
         private string _mainUrl;
         public string Url

@@ -6,6 +6,7 @@ using MusicLibrary.Interfaces;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SpotifyLibrary.Enum;
+using SpotifyLibrary.Helpers.Extensions;
 using SpotifyLibrary.Models.Ids;
 using SpotifyLibrary.Models.Response.SpotifyItems;
 using JsonSerializer = Newtonsoft.Json.JsonSerializer;
@@ -119,9 +120,10 @@ namespace SpotifyLibrary.Helpers.JsonConverters
         }
         private IAudioItem GetItem(JObject jsonObject, ref JsonSerializer serializer)
         {
-            if (!System.Enum.TryParse<AudioType>(jsonObject["type"]?.ToString(), true, out var typ))
-                return new EmptyItem(jsonObject);
-            ISpotifyItem item = typ switch
+            var uri = jsonObject["uri"]?.ToString();
+            var id = uri.UriToIdConverter();
+
+            ISpotifyItem item = id.AudioType switch
             {
                 AudioType.Artist => new SimpleArtist(),
                 AudioType.Album => new SimpleAlbum(),
@@ -132,6 +134,7 @@ namespace SpotifyLibrary.Helpers.JsonConverters
                     LinkType.CollectionTracks => new SimplePlaylist(true),
                     _ => new EmptyItem(jsonObject)
                 },
+                AudioType.Track => new FullTrack(),
                 _ => new EmptyItem(jsonObject)
             };
             serializer.Populate(jsonObject.CreateReader(), item);
