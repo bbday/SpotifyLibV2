@@ -16,14 +16,14 @@
 # Mono auto generated files
 mono_crash.*
 
-MusicLibarry/bin
-MusicLibarry/obj
+MediaLibarry/bin
+MediaLibarry/obj
 
 SpotifyLibrary.ConsoleTest/
 SpotifyUWPV4/
 SpotifyUWPV4.Core/
-SpotifyAPI/bin
-SpotifyAPI/obj
+SpotifyLibrary/bin
+SpotifyLibrary/obj
 SpotifyLibrary.Protobufs/bin
 SpotifyLibrary.Protobufs/obj
 SpotifyLibrary.Connect/bin

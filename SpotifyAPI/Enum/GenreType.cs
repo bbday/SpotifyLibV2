@@ -1,4 +1,0 @@
-﻿namespace SpotifyLibrary.Enum
-{
-
-}
