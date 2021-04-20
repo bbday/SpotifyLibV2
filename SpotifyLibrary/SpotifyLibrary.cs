@@ -40,6 +40,8 @@ namespace SpotifyLibrary
         private AsyncLazy<IMetadata>? _metadata;
         private AsyncLazy<IPlaylistsClient>? _playlists;
         private AsyncLazy<IUsersClient>? _users;
+        private AsyncLazy<IConnectState>? _connect;
+        private AsyncLazy<IArtistsClient>? _artists;
         public IAudioUser? CurrentUser { get; private set; }
         public AudioServiceType ServiceType => AudioServiceType.Spotify;
 
@@ -61,7 +63,8 @@ namespace SpotifyLibrary
 
             MercuryClient = new MercuryClient(this);
             Tokens = new TokensClient(this);
-
+            KeyManager = new AudioKeyManager(this);
+            newConnectClient = new SpotifyConnectReceiver(this);
             NetworkChange.NetworkAvailabilityChanged += NetworkChangeOnNetworkAvailabilityChanged;
             Instance = this;
         }
@@ -115,7 +118,8 @@ namespace SpotifyLibrary
 
         public IMercuryClient MercuryClient { get; private set; }
         public ITokensProvider Tokens { get; }
-        public ISpotifyConnectReceiver ConnectReceiver { get; }
+        public ISpotifyConnectReceiver ConnectReceiver => newConnectClient;
+        public IAudioKeyManager KeyManager { get; private set; }
 
         public AsyncLazy<IViewsClient> Views =>
             _views ??= new AsyncLazy<IViewsClient>(BuildLoggableClient<IViewsClient>);
@@ -140,24 +144,43 @@ namespace SpotifyLibrary
         public AsyncLazy<IUsersClient> UserClient  => _users 
             ??= new AsyncLazy<IUsersClient>(BuildLoggableClient<IUsersClient>);
 
+        public AsyncLazy<IConnectState> ConnectState => _connect 
+        ??= new AsyncLazy<IConnectState>(BuildLoggableClient<IConnectState>);
+        public AsyncLazy<IArtistsClient> ArtistsClient => _artists
+            ??= new AsyncLazy<IArtistsClient>(BuildLoggableClient<IArtistsClient>);
         public Task<ApWelcomeOrFailed> Authenticate(IAuthenticator authenticator, CancellationToken ct)
         {
             Authenticator = authenticator;
             MercuryClient?.Dispose();
             MercuryClient = new MercuryClient(this);
-            return Task.Run(() => MercuryClient.Connection.Connect(authenticator, ct), ct);
+            return Task.Run(async() =>
+            {
+                var connected = 
+                    await MercuryClient.Connection.Connect(authenticator, ct);
+                if (connected.Success)
+                {
+                    CurrentUser ??= new PrivateUser
+                    {
+                        Uri = connected.Welcome.CanonicalUsername
+                    };
+                }
+
+                return connected;
+            }, ct);
         }
 
-        public async Task<(ISpotifyConnectReceiver Receiver, PlayingItem InitialItem)> ConnectToRemote(IWebsocketClient websocket)
+        public async Task<(ISpotifyConnectReceiver Receiver, PlayingItem InitialItem)> 
+            ConnectToRemote(IWebsocketClient websocket,
+                ISpotifyPlayer player)
         {
-            var newConnectClient = new SpotifyConnectReceiver(this);
             CurrentUser ??= new PrivateUser
             {
                 Uri = MercuryClient.Connection.WelcomeOrFailed.Value.Welcome.CanonicalUsername
             };
-            return (newConnectClient, await newConnectClient.Connect(websocket));
+            return (newConnectClient, await newConnectClient.Connect(websocket, player));
         }
 
+        internal SpotifyConnectReceiver newConnectClient { get; private set; }
         internal virtual void OnConnectionError(Exception ex)
         {
             ConnectionError?.Invoke(this, ex);

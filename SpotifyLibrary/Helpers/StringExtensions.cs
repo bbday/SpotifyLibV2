@@ -1,10 +1,31 @@
 ﻿using System.Text.RegularExpressions;
+using SpotifyLibrary.Enums;
 using SpotifyLibrary.Ids;
 
 namespace Extensions
 {
     public static class StringExtensions
     {
+        public static Endpoint StringToEndPoint(this string input)
+        {
+            return input switch
+            {
+                "play" => Endpoint.Play,
+                "pause" => Endpoint.Pause,
+                "resume" => Endpoint.Resume,
+                "seek_to" => Endpoint.SeekTo,
+                "skip_next" => Endpoint.SkipNext,
+                "skip_prev" => Endpoint.SkipPrev,
+                "set_shuffling_context" => Endpoint.SetShufflingContext,
+                "set_repeating_context" => Endpoint.SetRepeatingContext,
+                "set_repeating_track" => Endpoint.SetRepeatingTrack,
+                "update_context" => Endpoint.UpdateContext,
+                "set_queue" => Endpoint.SetQueue,
+                "add_to_queue" => Endpoint.AddToQueue,
+                "transfer" => Endpoint.Transfer,
+                _ => Endpoint.Error
+            };
+        }
         public static bool IsEmpty(this string input)
         {
             return string.IsNullOrEmpty(input);
@@ -38,6 +59,8 @@ namespace Extensions
                 case "app":
                     //Link
                     return new LinkId(input) as ISpotifyId;
+                case "daily-mix-hub":
+                    return new LinkId(input, "made-for-x-hub");
                 case "user":
                     //"spotify:user:7ucghdgquf6byqusqkliltwc2:collection
                     var regexMatch = Regex.Match(input, "spotify:user:(.*):playlist:(.{22})");

@@ -8,6 +8,7 @@
         ChartTrack,
         SearchTrack,
         SearchOverviewTrack,
-        Podcast
+        Podcast,
+        CollectionTrack
     }
 }

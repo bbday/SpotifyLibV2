@@ -9,7 +9,14 @@ namespace SpotifyLibrary.Models.Response.SpotifyItems
 {
     public class FullTrack : SimpleTrack, IAlbumTrack
     {
-        public override List<UrlImage> Images => Group.Images;
+
+        public override List<UrlImage> Images => Group?.Images ?? new List<UrlImage>
+        {
+            new UrlImage
+            {
+                Url = Image
+            }
+        };
         public override string Description => string.Join(",", Artists.Select(z => z.Name));
         
         [JsonProperty("album")]

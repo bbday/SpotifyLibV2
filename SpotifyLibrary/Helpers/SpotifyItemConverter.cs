@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Extensions;
 using MediaLibrary.Enums;
@@ -44,6 +45,16 @@ namespace SpotifyLibrary.Helpers
         {
             var uri = jsonObject["uri"]?.ToString();
             var id = uri.UriToIdConverter();
+            if (id == null)
+            {
+                //try with capital U
+                uri = jsonObject["Uri"]?.ToString();
+                id = uri.UriToIdConverter();
+                if (id == null)
+                {
+                    Debugger.Break();
+                }
+            }
 
             ISpotifyItem item = id.AudioType switch
             {

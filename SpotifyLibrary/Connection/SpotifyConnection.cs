@@ -671,7 +671,7 @@ namespace SpotifyLibrary.Connection
                         break;
                     case MercuryPacketType.AesKey:
                     case MercuryPacketType.AesKeyError:
-                        // _library.MercuryClient.AudioKeyManager.Dispatch(packet);
+                         _library.KeyManager.Dispatch(packet);
                         break;
                     case MercuryPacketType.ProductInfo:
                         try

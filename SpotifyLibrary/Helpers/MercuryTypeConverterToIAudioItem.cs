@@ -46,9 +46,9 @@ namespace SpotifyLibrary.Helpers.JsonConverters
         private IAudioItem GetItem(JObject jsonObject, ref JsonSerializer serializer)
         {
             var uri = jsonObject["uri"]?.ToString();
-            var id = uri.UriToIdConverter();
+            var id = uri?.UriToIdConverter();
            
-            var item = id.AudioType switch
+            var item = id?.AudioType switch
             {
                 AudioItemType.Episode => new SimpleEpisode(),
                 AudioItemType.Artist => new SimpleArtist(),
@@ -59,9 +59,10 @@ namespace SpotifyLibrary.Helpers.JsonConverters
                 {
                     LinkType.CollectionTracks => new SimplePlaylist(true),
                     LinkType.Genre => new SimpleGenre(jsonObject),
+                    LinkType.DailyMixHub => new SimpleGenre(jsonObject),
                     _ => new EmptyItem(jsonObject)
                 },
-                AudioItemType.Track => new SimpleTrack() as ISpotifyItem,
+                AudioItemType.Track => new FullTrack() as ISpotifyItem,
                 _ => new EmptyItem(jsonObject) as ISpotifyItem
             };
             serializer.Populate(jsonObject.CreateReader(), item);

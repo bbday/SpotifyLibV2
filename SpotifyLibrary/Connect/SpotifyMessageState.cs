@@ -18,10 +18,11 @@ namespace SpotifyLibrary.Connect
         private RepeatState? _previousRepeatState;
 
         internal SpotifyMessageState(DealerClient dealerClient,
+            SpotifyRequestState requestState,
             SpotifyConnectReceiver onNewCluster)
         {
             _dealerClient = dealerClient;
-            //_requestState = requestState;
+            _requestState = requestState;
             _spotifyConnectClient = onNewCluster;
             dealerClient.AddMessageListener(this,
                 "hm://pusher/v1/connections/",
@@ -52,37 +53,13 @@ namespace SpotifyLibrary.Connect
                             _spotifyConnectClient.OnNewPlaybackWrapper(this, update.Cluster.PlayerState);
                         }
                     }
-                    if (PreviousCluster?.PlayerState != null && update.Cluster?.PlayerState != null)
-                    {
-                        if (PreviousCluster.PlayerState.IsPaused != update.Cluster.PlayerState.IsPaused)
-                        {
-                            _spotifyConnectClient.OnPlaybackStateChanged(this,
-                                update.Cluster.PlayerState.IsPaused);
-                        }
-                    }
-                    if (PreviousCluster?.PlayerState?.Options == null)
-                    {
-                        _spotifyConnectClient.OnShuffleStatecHanged(this, 
-                            update.Cluster!.PlayerState!.Options.ShufflingContext);
-                        _previousRepeatState = ParseRepeatState(update.Cluster);
-                        _spotifyConnectClient.OnRepeatStateChanged(this, _previousRepeatState.Value);
-                    }
-                    else
-                    {
-                        var newRepeatState = ParseRepeatState(update.Cluster!);
-                        if (_previousRepeatState != newRepeatState)
-                        {
-                            _spotifyConnectClient.OnRepeatStateChanged(this, newRepeatState);
-                            _previousRepeatState = newRepeatState;
-                        }
+                    _spotifyConnectClient.OnPlaybackStateChanged(this,
+                        update.Cluster.PlayerState.IsPaused);
 
-                        if (PreviousCluster.PlayerState.Options.ShufflingContext !=
-                            update.Cluster!.PlayerState!.Options.ShufflingContext)
-                        {
-                            _spotifyConnectClient.OnShuffleStatecHanged(this,
-                                update.Cluster.PlayerState.Options.ShufflingContext);
-                        }
-                    }
+                    _spotifyConnectClient.OnShuffleStatecHanged(this,
+                        update.Cluster!.PlayerState!.Options.ShufflingContext);
+                    _spotifyConnectClient.OnRepeatStateChanged(this, ParseRepeatState(update.Cluster));
+
 
                     if (Math.Abs(_currentPosition - GetPosition(update.Cluster)) > 10)
                     {
@@ -92,23 +69,36 @@ namespace SpotifyLibrary.Connect
                     }
                 }
 
-                //var now = TimeProvider.CurrentTimeMillis();
-                //var ts = update.Cluster.Timestamp - 3000; // Workaround
-                //if (!_spotifyConnectClient.Client.Config.DeviceId.Equals(update.Cluster.ActiveDeviceId)
-                //    && _requestState.IsActive
-                //    && now > (long)_requestState.PutStateRequest.StartedPlayingAt
-                //    && ts > (long)_requestState.PutStateRequest.StartedPlayingAt)
-                //{
-                //    foreach (var dealerClientReqListener in _dealerClient.ReqListeners)
-                //    {
-                //        dealerClientReqListener.Value.NotActive();
-                //    }
-                //}
+                var now = TimeProvider.CurrentTimeMillis();
+                var ts = update.Cluster.Timestamp - 3000; // Workaround
+                if (_requestState != null)
+                {
+                    if (!_spotifyConnectClient.Library.Configuration.DeviceId.Equals(update.Cluster.ActiveDeviceId)
+                        && _requestState.IsActive
+                        && now > (long) _requestState.PutStateRequest.StartedPlayingAt
+                        && ts > (long) _requestState.PutStateRequest.StartedPlayingAt)
+                    {
+                        foreach (var dealerClientReqListener in _dealerClient.ReqListeners)
+                        {
+                            dealerClientReqListener.Value.NotActive();
+                        }
+                    }
+                }
+
+                if (update?.Cluster != null)
+                    _spotifyConnectClient.NotifyDeviceUpdates(this, update.Cluster);
+
 
                 PreviousCluster = update.Cluster; 
                 return Task.CompletedTask;
             }
-
+            else if (uri.StartsWith("hm://connect-state/v1/connect/volume"))
+            {
+                var volumeCommand  =
+                    SetVolumeCommand.Parser.ParseFrom(payload);
+                _spotifyConnectClient.Player.SetVolume(this, volumeCommand.Volume);
+                _requestState.PutStateRequest.LastCommandMessageId = (uint)volumeCommand.CommandOptions.MessageId;
+            }
             return Task.FromResult($"Could not handle uri {uri}");
         }
         internal int GetPosition(Cluster cluster)

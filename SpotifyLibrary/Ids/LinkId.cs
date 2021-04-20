@@ -32,6 +32,8 @@ namespace SpotifyLibrary.Ids
                 (new Regex("spotify:user:(.*):collection"), LinkType.CollectionTracks),
                 (new Regex($"spotify:genre:(.*)"), LinkType.Genre),
                 (new Regex($"spotify:app:genre:(.*)"), LinkType.Genre),
+                (new Regex($"spotify:app:hub:browse:internal:(.*)"), LinkType.Puff),
+                (new Regex("spotify:daily-mix-hub"), LinkType.DailyMixHub),
                 (new Regex(""), LinkType.Unknown)
             };
             var firstMatch = regexMatches.FirstOrDefault(z 
@@ -39,9 +41,20 @@ namespace SpotifyLibrary.Ids
             if (firstMatch.Item1 != null)
             {
                 LinkType = firstMatch.CollectionTracks;
-                if (LinkType == LinkType.Genre)
+                switch (LinkType)
                 {
-                    GenreType = uri.Split(':').Last();
+                    case LinkType.Genre:
+                        GenreType = uri.Split(':').Last();
+                        break;
+                    case LinkType.Puff:
+                        GenreType = uri.Split(':').Last()
+                            .Replace("-page", "");
+                        break;
+                    case LinkType.DailyMixHub:
+                        GenreType = "made-for-x-hub";
+                        break;
+                    default:
+                        break;
                 }
             }
         }

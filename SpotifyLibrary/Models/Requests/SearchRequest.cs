@@ -43,18 +43,12 @@ namespace SpotifyLibrary.Models.Requests
             switch (SearchType)
             {
                 case SearchType.Full:
-                    var url =
-                        Flurl.Url.Combine(MercurySearchManager.MainSearch,
-                            HttpUtility.UrlEncode(_query, Encoding.UTF8));
-                    url += "?entityVersion=2";
-                    url += "&limit=" + Limit;
-                    url += "&imageSize=" + HttpUtility.UrlEncode(ImageSize, Encoding.UTF8);
-                    url += "&catalogue=" + HttpUtility.UrlEncode(Catalogue, Encoding.UTF8);
-                    url += "&country=" + HttpUtility.UrlEncode(Country, Encoding.UTF8);
-                    url += "&locale=" + HttpUtility.UrlEncode(Locale, Encoding.UTF8);
-                    url += "&username=" + HttpUtility.UrlEncode(Username, Encoding.UTF8);
+                    var url =$"{Flurl.Url.Combine(MercurySearchManager.MainSearch, HttpUtility.UrlEncode(_query, Encoding.UTF8))}" +
+                             $"?entityVersion=2&limit={Limit}&imageSize={HttpUtility.UrlEncode(ImageSize, Encoding.UTF8)}&catalogue={HttpUtility.UrlEncode(Catalogue, Encoding.UTF8)}" +
+                             $"&country={HttpUtility.UrlEncode(Country, Encoding.UTF8)}" +
+                             $"&locale={HttpUtility.UrlEncode(Locale, Encoding.UTF8)}" +
+                             $"&username={HttpUtility.UrlEncode(Username, Encoding.UTF8)}";
                     return url;
-                    break;
                 case SearchType.Quick:
                     var quickUrl =
                         Flurl.Url.Combine(MercurySearchManager.QuickSearch,

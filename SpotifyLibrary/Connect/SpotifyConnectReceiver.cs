@@ -12,6 +12,7 @@ using SpotifyLibrary.Connect.Interfaces;
 using SpotifyLibrary.Ids;
 using SpotifyLibrary.Interfaces;
 using SpotifyLibrary.Models;
+using SpotifyLibrary.Models.Response;
 using SpotifyLibrary.Models.Response.SpotifyItems;
 
 namespace SpotifyLibrary.Connect
@@ -21,28 +22,61 @@ namespace SpotifyLibrary.Connect
         private readonly AsyncLock clusterLock = new AsyncLock();
         internal readonly ISpotifyLibrary Library;
         private ManualResetEvent _waitForConid = null!;
-        private SpotifyMessageState _messageState;
-        private SpotifyRequestState _requestState;
+        internal SpotifyMessageState MessageState;
+        internal SpotifyRequestState RequestState;
+        private List<IRemoteDevice> _allDevices;
+        private IRemoteDevice _activeDevice;
+
         internal SpotifyConnectReceiver(ISpotifyLibrary library)
         {
             Library = library;
         }
 
-        internal async Task<PlayingItem> Connect(IWebsocketClient ws)
+        internal async Task<PlayingItem> Connect(IWebsocketClient ws, ISpotifyPlayer player)
         {
+            Player = player;
+
             var dealerClient = new DealerClient((Library.CurrentUser as PrivateUser)!
                 .Uri.Split(':').Last(),
                 Library.Tokens, ws);
             dealerClient.Attach();
-            _messageState = new SpotifyMessageState(dealerClient, this);
-            _requestState = new SpotifyRequestState(Library, dealerClient, this);
+            RequestState = new SpotifyRequestState(Library, dealerClient, this);
+
+            MessageState = new SpotifyMessageState(dealerClient, RequestState, this);
             var connected = await dealerClient.Connect();
             WaitForConnectionId.WaitOne();
             return LastReceivedCluster;
         }
+        internal ISpotifyPlayer Player { get; private set; }
 
+        public event EventHandler<List<IRemoteDevice>>? DevicesUpdated;
+        public event EventHandler? IncomingTransfer;
+        public event EventHandler<Exception?>? TransferDone;
 
-        public IRemoteDevice ActiveDevice { get; } = null!;
+        public List<IRemoteDevice> AllDevices
+        {
+            get => _allDevices;
+            private set
+            {
+                _allDevices = value;
+                DevicesUpdated?.Invoke(this, value);
+            }
+        }
+
+        public IRemoteDevice ActiveDevice
+        {
+            get => _activeDevice;
+            set
+            {
+                var update = !(value?.Equals(_activeDevice) ?? true);
+                _activeDevice = value;
+                if (update)
+                {
+                    ActiveDeviceChanged?.Invoke(this, value);
+                }
+            }
+        } 
+        public event EventHandler<IRemoteDevice> ActiveDeviceChanged;
         public event EventHandler<RepeatState>? RepeatStateChanged;
         public event EventHandler<double>? PositionChanged;
         public event EventHandler<bool>? IsShuffleCHanged;
@@ -54,14 +88,60 @@ namespace SpotifyLibrary.Connect
         }
 
         public PlayingItem? LastReceivedCluster { get; private set; } = null!;
+        public async Task<AcknowledgedResponse> TransferDevice(string newDeviceId)
+        {
+            var connetState = await Library.ConnectState;
+            var transfer = await connetState.Transfer(Library.Configuration.DeviceId, newDeviceId,
+                new
+                {
+                    transfer_options = new
+                    {
+                        restore_paused = "restore"
+                    }
+                });
+            return transfer;
+        }
 
         internal async void OnNewPlaybackWrapper(object sender, PlayerState state)
+        {
+            var newWrapper = await LocalStateToWrapper(null, state);
+            LastReceivedCluster = newWrapper;
+
+            NewItem?.Invoke(sender, (LastReceivedCluster, ActiveDevice));
+
+            WaitForConnectionId.Set();
+        }
+        internal async void OnNewPlaybackWrapper(object sender, Cluster state)
         {
             var newWrapper = await LocalStateToWrapper(state);
             LastReceivedCluster = newWrapper;
 
             NewItem?.Invoke(sender, (LastReceivedCluster, ActiveDevice));
 
+            WaitForConnectionId.Set();
+        }
+
+        internal void NotifyDeviceUpdates(object sender, Cluster cluster)
+        {
+            var devicesTemp = new List<IRemoteDevice>();
+            foreach (var deviceInfo in cluster.Device)
+            {
+                //if (deviceInfo.Value.DeviceId == Library.Configuration.DeviceId)
+                //{
+                //    owndevice = DeviceInfoToRemoteDevice(deviceInfo.Value, cluster.ActiveDeviceId);
+                //    continue;
+                //}
+
+                if (deviceInfo.Value.DeviceId == cluster.ActiveDeviceId)
+                {
+                    ActiveDevice = DeviceInfoToRemoteDevice(deviceInfo.Value, cluster.ActiveDeviceId);
+                    continue;
+                }
+
+                devicesTemp.Add(DeviceInfoToRemoteDevice(deviceInfo.Value, cluster.ActiveDeviceId));
+            }
+
+            AllDevices = devicesTemp;
             WaitForConnectionId.Set();
         }
         internal void OnRepeatStateChanged(object sender, RepeatState state)
@@ -95,14 +175,16 @@ namespace SpotifyLibrary.Connect
             IsPausedChanged?.Invoke(sender, paused);
         }
         private async Task<PlayingItem> LocalStateToWrapper(
-       PlayerState currentState)
+       Cluster? cluster = null,
+       PlayerState? playerState = null)
         {
             using (await clusterLock.LockAsync())
             {
+                var currentState = cluster?.PlayerState ?? playerState;
                 RepeatState repeatState;
 
-                var repeatingTrack = currentState.Options.RepeatingTrack;
-                var repeatingContext = currentState.Options.RepeatingContext;
+                var repeatingTrack = currentState!.Options.RepeatingTrack;
+                var repeatingContext = currentState!.Options.RepeatingContext;
                 if (repeatingContext && !repeatingTrack)
                 {
                     repeatState = RepeatState.Context;
@@ -153,23 +235,68 @@ namespace SpotifyLibrary.Connect
                         throw new NotImplementedException("?");
                 }
 
+               // var owndevice = default(IRemoteDevice);
+                if (cluster != null)
+                {
+                    var devicesTemp = new List<IRemoteDevice>();
+                    foreach (var deviceInfo in cluster.Device)
+                    {
+                        //if (deviceInfo.Value.DeviceId == Library.Configuration.DeviceId)
+                        //{
+                        //    owndevice = DeviceInfoToRemoteDevice(deviceInfo.Value, cluster.ActiveDeviceId);
+                        //    continue;
+                        //}
+
+                        if (deviceInfo.Value.DeviceId == cluster.ActiveDeviceId)
+                        {
+                            ActiveDevice = DeviceInfoToRemoteDevice(deviceInfo.Value, cluster.ActiveDeviceId);
+                            continue;
+                        }
+
+                        devicesTemp.Add(DeviceInfoToRemoteDevice(deviceInfo.Value, cluster.ActiveDeviceId));
+                    }
+
+                    AllDevices = devicesTemp;
+                }
+
                 var clustered = new PlayingItem(item, groupId, repeatState,
                     currentState.Options.ShufflingContext,
                     currentState.IsPaused,
-                    null,
+                    ActiveDevice,
                     contextId,
                     currentState.Timestamp,
-                    currentState.PositionAsOfTimestamp, descriptions, TimeSpan.FromMilliseconds(durationMs));
+                    currentState.PositionAsOfTimestamp, descriptions
+                    , TimeSpan.FromMilliseconds(durationMs),
+                    AllDevices);
                 LastReceivedCluster = clustered;
                 return clustered;
             }
         }
 
-        public Task UpdateConnectionId(string header) => _requestState.UpdateConnectionId(header);
+        private IRemoteDevice DeviceInfoToRemoteDevice(DeviceInfo info,
+            string activeDeviceId)
+        {
+            return new SpotifyDevice(info.DeviceId, info.Name,
+                info.DeviceType.ToString(),
+                !info.Capabilities.DisableVolume,
+                (int)info.Volume,
+                info.DeviceId == activeDeviceId);
+        }
+        public Task UpdateConnectionId(string header) => RequestState.UpdateConnectionId(header);
 
         public void OnNewCluster(Cluster tryGet)
         {
-            _messageState.PreviousCluster = tryGet;
+            MessageState.PreviousCluster = tryGet;
+        }
+
+        public void OnIncomingTransfer(object sender)
+        {
+            IncomingTransfer?.Invoke(sender, EventArgs.Empty);
+        }
+
+        public void OnTransferdone(object sender, Exception p1)
+        {
+            TransferDone?.Invoke(sender, p1);
         }
     }
 }

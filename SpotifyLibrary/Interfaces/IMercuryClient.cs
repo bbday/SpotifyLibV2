@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using SpotifyLibrary.Exceptions;
+using SpotifyLibrary.Models;
 using SpotifyLibrary.Models.Requests;
 
 namespace SpotifyLibrary.Interfaces
@@ -32,5 +33,8 @@ namespace SpotifyLibrary.Interfaces
         /// <exception cref="MercuryException"></exception>
         /// <returns></returns>
         Task<T> SendAsync<T>(JsonMercuryRequest<T> request, CancellationToken? ct = null) where T : class;
+
+        Task<MercuryResponse?> SendAsync(
+            RawMercuryRequest request, CancellationToken? ct = null);
     }
 }

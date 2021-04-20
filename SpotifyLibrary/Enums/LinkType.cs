@@ -4,6 +4,8 @@
     {
         Unknown,
         CollectionTracks,
-        Genre
+        Genre,
+        Puff,
+        DailyMixHub
     }
 }

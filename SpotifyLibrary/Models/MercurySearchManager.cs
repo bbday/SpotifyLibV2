@@ -75,7 +75,7 @@ namespace SpotifyLibrary.Models
                     case SearchType.Full:
                         return Task.Run<T>(() => mercury.SendAsync(new
                             JsonMercuryRequest<T>(
-                                RawMercuryRequest.Get(req.BuildUrl()))), cts);
+                                RawMercuryRequest.Get(req.BuildUrl())), cts), cts);
                     default:
                         throw new ArgumentOutOfRangeException();
                 }

@@ -9,6 +9,7 @@
         TrackPaused,
         TrackPlayed,
         NewTrack,
-        PositionChanged
+        PositionChanged,
+        VolumeChanged
     }
 }

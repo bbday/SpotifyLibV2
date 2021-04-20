@@ -1,5 +1,7 @@
 ﻿using System.Collections.Generic;
 using MediaLibrary;
+using MediaLibrary.Interfaces;
+using SpotifyLibrary.Ids;
 
 namespace SpotifyLibrary.Models.Response.SpotifyItems
 {
@@ -27,5 +29,7 @@ namespace SpotifyLibrary.Models.Response.SpotifyItems
             set => _images = value;
         }
         public string Image { get; set; }
+
+        public override IAudioId Id => _id ??= new EpisodeId(Uri);
     }
 }

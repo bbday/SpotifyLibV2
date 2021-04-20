@@ -16,7 +16,7 @@ namespace SpotifyLibrary.Models
             bool isPaused,
             IRemoteDevice activeDevice,
             IAudioId context, long timeStamp, long positionAsOfTimestamp, List<Descriptions> descriptions,
-            TimeSpan duration)
+            TimeSpan duration, List<IRemoteDevice> devices)
         {
             Group = group;
             AudioItem = audioItem;
@@ -30,6 +30,7 @@ namespace SpotifyLibrary.Models
             _positionAsOfTimestamp = positionAsOfTimestamp;
             Descriptions = descriptions;
             Duration = duration;
+            Devices = devices;
         }
 
         public TimeSpan Duration { get; internal set; }
@@ -55,5 +56,7 @@ namespace SpotifyLibrary.Models
 
         private long _timeStamp { get; }
         private long _positionAsOfTimestamp { get; }
+
+        public List<IRemoteDevice> Devices { get; }
     }
 }

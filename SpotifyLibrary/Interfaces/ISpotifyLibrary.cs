@@ -54,6 +54,7 @@ namespace SpotifyLibrary.Interfaces
         IAudioUser CurrentUser { get; }
         ITokensProvider Tokens { get; }
         ISpotifyConnectReceiver ConnectReceiver { get; }
+        IAudioKeyManager KeyManager { get; }
         AsyncLazy<IViewsClient> Views { get; }
         AsyncLazy<ITracksClient> TracksClient { get;  }
         AsyncLazy<IEpisodesClient> EpisodesClient { get; }
@@ -61,8 +62,11 @@ namespace SpotifyLibrary.Interfaces
         AsyncLazy<IMetadata> MetadataClient { get; }
         AsyncLazy<IPlaylistsClient> PlaylistsClient { get; }
         AsyncLazy<IUsersClient> UserClient { get; }
+        AsyncLazy<IConnectState> ConnectState { get; }
+        AsyncLazy<IArtistsClient> ArtistsClient { get; }
         Task<ApWelcomeOrFailed> Authenticate(IAuthenticator authenticator, CancellationToken ct);
 
-        Task<(ISpotifyConnectReceiver Receiver, PlayingItem InitialItem)> ConnectToRemote(IWebsocketClient websocket);
+        Task<(ISpotifyConnectReceiver Receiver, PlayingItem InitialItem)> ConnectToRemote(IWebsocketClient websocket,
+            ISpotifyPlayer player);
     }
 }

@@ -8,12 +8,14 @@ namespace SpotifyLibrary.Models.Requests
     public class TracksRequest
     {
         /// <summary>
-        ///
+        /// 
         /// </summary>
         /// <param name="ids">A comma-separated list of the Spotify IDs for the tracks. Maximum: 50 IDs.</param>
-        public TracksRequest(IList<string> ids)
+        /// <param name="fromToken"></param>
+        public TracksRequest(IList<string> ids, string market = null)
         {
             Ids = ids;
+            Market = market;
         }
 
         /// <summary>

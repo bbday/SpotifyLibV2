@@ -1,8 +1,9 @@
-﻿using MediaLibrary.Enums;
+﻿using System;
+using MediaLibrary.Enums;
 
 namespace MediaLibrary.Interfaces
 {
-    public interface IRemoteDevice
+    public interface IRemoteDevice : IEquatable<IRemoteDevice>
     {
         AudioServiceType Type { get; }
         string Id { get; }

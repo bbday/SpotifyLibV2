@@ -21,7 +21,7 @@ namespace SpotifyLibrary.Models.Response.SpotifyItems
         [JsonProperty("explicit_content")]
         public ExplicitContent ExplicitContent { get; set; }
         public Followers Folowers { get; set; }
-        [JsonIgnore] public IAudioId Id => __id ??= new UserId(_id);
+        [JsonIgnore] public IAudioId Id => __id ??= new UserId(Uri);
         public List<UrlImage> Images { get; set; }
         public AudioItemType Type { get; set; }
         public string Uri { get; set; }

@@ -10,11 +10,11 @@ namespace SpotifyLibrary.Models.Response
 {
     public class GenericSpotifyTrack : ISpotifyItem
     {
-        private IAudioId _id;
+        protected IAudioId _id;
 
         public AudioServiceType AudioService => AudioServiceType.Spotify;
         [Newtonsoft.Json.JsonIgnore]
-        public IAudioId Id => _id ??= new TrackId(Uri);
+        public virtual IAudioId Id => _id ??= new TrackId(Uri);
         public virtual AudioItemType Type => AudioItemType.Track;
 
         /// <summary>
