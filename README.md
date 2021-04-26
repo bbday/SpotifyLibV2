@@ -14,24 +14,22 @@
 
 All REST Clients and other clients are LazyLoaded, which means they are not fetched/initialized until the developer specifically requests them. 
 
-You can create a new instance of the class ```SpotifyClient```.
+You can create a new instance of the class ```SpotifyLibrary```.
 The parameter ```ICacheManager``` is **optional**. (The developer has to implement this themselves.)
 
-The ```SpotifyClient.Authenticate``` function accepts a parameter of type: ```SpotifyConfiguration```
-Which accepts the following paramemters
+The ```SpotifyClient.Authenticate``` function Which accepts the following paramemters
 
 - Type: IAuthenticator:
 -- Out of the box there are 2 implementations you can directly use. For userpass use ```UserPassAuthenticator```
 
 ```
-var newSpotifyClient = new SpotifyClient();
+var newSpotifyClient = new SpotifyLibrary.SpotifyLibrary(SpotifyConfiguration.Default())
 
 var userDataAuthenticator = new UserPassAuthenticator(USERNAME, PASSWORD);
-var newConfiguration = new SpotifyConfiguration(userDataAuthenticator, DEVICENAME);
-var authenticationResultTask = newSpotifyClient.Authenticate(newConfiguration, false);
+var authenticationResultTask = newSpotifyClient.Authenticate(userDataAuthenticator, CancellationToken.None);
 ```
 
-```SpotifyClient.Authenticate``` returns ```Task<SpotifyConnectionResult>``` which contains the fields :
+```SpotifyLibrary.Authenticate``` returns ```Task<ApWelcomeOrFailed>``` which contains the fields :
 
 - Success : **bool** Boolean indicating if authentication was successfull.
 - Message : **string**  Message if authentication failed.
@@ -39,7 +37,7 @@ var authenticationResultTask = newSpotifyClient.Authenticate(newConfiguration, f
 - ApFailed : **APFailed** ONLY FILLED IF AUTHENTICATION FAILED
 
 Once authentication was successfull, you can proceed to generate a bearer token using:
-```SpotifyClient.Tokens.GetToken()```
+```SpotifyLibrary.Tokens.GetToken()```
 
 ```
 var tokensClient = newSpotifyClient.Tokens;
