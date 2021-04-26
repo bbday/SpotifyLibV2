@@ -8,10 +8,13 @@ using Extensions;
 using MediaLibrary.Enums;
 using MediaLibrary.Interfaces;
 using Nito.AsyncEx;
+using Spotify.Playlist4.Proto;
 using SpotifyLibrary.Connect.Interfaces;
+using SpotifyLibrary.Enums;
 using SpotifyLibrary.Ids;
 using SpotifyLibrary.Interfaces;
 using SpotifyLibrary.Models;
+using SpotifyLibrary.Models.Requests;
 using SpotifyLibrary.Models.Response;
 using SpotifyLibrary.Models.Response.SpotifyItems;
 
@@ -63,7 +66,7 @@ namespace SpotifyLibrary.Connect
             }
         }
 
-        public IRemoteDevice ActiveDevice
+        public IRemoteDevice? ActiveDevice
         {
             get => _activeDevice;
             set
@@ -100,6 +103,77 @@ namespace SpotifyLibrary.Connect
                     }
                 });
             return transfer;
+        }
+        public async Task<AcknowledgedResponse> InvokeCommandOnRemoteDevice(RemoteCommand playbackState,
+            string deviceId = null)
+        {
+            var to = deviceId ?? ActiveDevice?.Id ?? Library.Configuration.DeviceId;
+            var connetState = await Library.ConnectState;
+            switch (playbackState)
+            {
+                case RemoteCommand.Pause:
+                    return await connetState.Command(Library.Configuration.DeviceId, 
+                        to, new
+                    {
+                        command = new
+                        {
+                            endpoint = "pause"
+                        }
+                    });
+                case RemoteCommand.Play:
+                    return await connetState.Command(Library.Configuration.DeviceId,
+                        to, new
+                    {
+                        command = new
+                        {
+                            endpoint = "resume"
+                        }
+                    });
+                    break;
+                case RemoteCommand.Skip:
+                    break;
+                case RemoteCommand.Previous:
+                    break;
+                case RemoteCommand.ShuffleToggle:
+                    break;
+                case RemoteCommand.RepeatContext:
+                    break;
+                case RemoteCommand.RepeatTrack:
+                    break;
+                case RemoteCommand.RepeatOff:
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(playbackState), playbackState, null);
+            }
+            throw new ArgumentOutOfRangeException(nameof(playbackState), playbackState, null);
+        }
+        public async Task<AcknowledgedResponse> PlayItem(string connectClientCurrentDevice,
+            IPlayRequest request)
+        {
+            var connetState = await Library.ConnectState;
+            var to = connectClientCurrentDevice ?? ActiveDevice?.Id ?? Library.Configuration.DeviceId;
+
+            return await connetState.Command(
+                Library.Configuration.DeviceId,
+                to, request.GetModel()); ;
+        }
+
+        public async Task<AcknowledgedResponse> Seek(double delta,
+            string? deviceId = null)
+        {
+            var connetState = await Library.ConnectState;
+            var to = deviceId ??
+                     ActiveDevice?.Id ?? Library.Configuration.DeviceId;
+
+            return await connetState.Command(Library.Configuration.DeviceId,
+                to, new
+                {
+                    command = new
+                    {
+                        endpoint = "seek_to",
+                        value = delta
+                    }
+                });
         }
 
         internal async void OnNewPlaybackWrapper(object sender, PlayerState state)

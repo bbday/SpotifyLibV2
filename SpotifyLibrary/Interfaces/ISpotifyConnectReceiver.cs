@@ -4,7 +4,9 @@ using System.Text;
 using System.Threading.Tasks;
 using MediaLibrary.Enums;
 using MediaLibrary.Interfaces;
+using SpotifyLibrary.Enums;
 using SpotifyLibrary.Models;
+using SpotifyLibrary.Models.Requests;
 using SpotifyLibrary.Models.Response;
 
 namespace SpotifyLibrary.Interfaces
@@ -23,5 +25,13 @@ namespace SpotifyLibrary.Interfaces
         IRemoteDevice ActiveDevice { get; }
         PlayingItem LastReceivedCluster { get; }
         Task<AcknowledgedResponse> TransferDevice(string newDeviceId);
+
+        Task<AcknowledgedResponse> InvokeCommandOnRemoteDevice(RemoteCommand playbackState,
+            string? deviceId = null);
+        Task<AcknowledgedResponse> Seek(double delta,
+            string? deviceId = null);
+
+        Task<AcknowledgedResponse> PlayItem(string connectClientCurrentDevice,
+            IPlayRequest request);
     }
 }

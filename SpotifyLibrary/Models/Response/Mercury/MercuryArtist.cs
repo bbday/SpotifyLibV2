@@ -111,7 +111,7 @@ namespace SpotifyLibrary.Models.Response.Mercury
         [JsonPropertyName("uri")]
         public string Uri { get; set; }
 
-        public string Description => $"{CreatorAbout.MonthlyListeners} followers";
+        public string Description => $"{CreatorAbout.MonthlyListeners:#,##0} monthly listeners";
         public string Name => Info.Name;
         public List<UrlImage> Images => Info.Portraits?.Select(z => new UrlImage
         {

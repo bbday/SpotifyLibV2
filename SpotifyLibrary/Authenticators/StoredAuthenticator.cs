@@ -10,7 +10,7 @@ namespace SpotifyLibrary.Authenticators
 {
     public class StoredAuthenticator : IAuthenticator
     {
-        private readonly Func<Task<string>> fetch;
+        private readonly Func<Task<StoredCredentials>> fetch;
         private LoginCredentials credentials;
 
 
@@ -21,17 +21,16 @@ namespace SpotifyLibrary.Authenticators
         ///     A function that should return a json format of type <see cref="StoredCredentials" />
         ///     You can use this parameter to for example fetch a file and read its contents.
         /// </param>
-        public StoredAuthenticator(Func<Task<string>> fetchJsonData)
+        public StoredAuthenticator(Func<Task<StoredCredentials>> fetchJsonData)
         {
             fetch = fetchJsonData;
         }
 
         public async Task<LoginCredentials> Get()
         {
-            var json = await fetch.Invoke();
-            if (string.IsNullOrEmpty(json))
+            var data = await fetch.Invoke();
+            if (data == null)
                 throw new UnauthorizedAccessException("No credentials stored.");
-            var data = JsonConvert.DeserializeObject<StoredCredentials>(json);
             credentials = new LoginCredentials
             {
                 Typ = data.AuthenticationType,

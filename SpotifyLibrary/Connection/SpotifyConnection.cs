@@ -328,7 +328,7 @@ namespace SpotifyLibrary.Connection
 
             SendUnchecked(cmd,
                 payload,
-                CancellationToken.None);
+                closedToken);
         }
         private void SendUnchecked(MercuryPacketType cmd,
             byte[] payload, CancellationToken cts)
