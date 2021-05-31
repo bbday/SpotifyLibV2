@@ -22,8 +22,9 @@ MediaLibarry/obj
 SpotifyLibrary.ConsoleTest/
 SpotifyUWPV4/
 SpotifyUWPV4.Core/
-SpotifyLibrary/bin
-SpotifyLibrary/obj
+Spotify.Lib/bin
+Spotify.Lib/obj
+Spotify.Lib/.vs
 SpotifyLibrary.Protobufs/bin
 SpotifyLibrary.Protobufs/obj
 SpotifyLibrary.Connect/bin
