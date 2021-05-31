@@ -7,6 +7,8 @@
 - Play audio
 - Cross platform (.NET Standard)
 
+The lib has been rewritten to suite a more data-oriented design.
+Over the past few years, I've grown to hate object oriented programming and so I decided to try data-oriented.
 
 ## Examples
 
@@ -14,34 +16,28 @@
 
 All REST Clients and other clients are LazyLoaded, which means they are not fetched/initialized until the developer specifically requests them. 
 
-You can create a new instance of the class ```SpotifyLibrary```.
-The parameter ```ICacheManager``` is **optional**. (The developer has to implement this themselves.)
+You can create a new instance of the class ```SpotifyClient```.
 
 The ```SpotifyClient.Authenticate``` function Which accepts the following paramemters
 
+- Type: locale (string)
 - Type: IAuthenticator:
 -- Out of the box there are 2 implementations you can directly use. For userpass use ```UserPassAuthenticator```
 
 ```
-var newSpotifyClient = new SpotifyLibrary.SpotifyLibrary(SpotifyConfiguration.Default())
+var newSpotifyClient = new SpotifyClient();
 
 var userDataAuthenticator = new UserPassAuthenticator(USERNAME, PASSWORD);
-var authenticationResultTask = newSpotifyClient.Authenticate(userDataAuthenticator, CancellationToken.None);
+newSpotifyClient.Authenticate(userDataAuthenticator);
 ```
-
-```SpotifyLibrary.Authenticate``` returns ```Task<ApWelcomeOrFailed>``` which contains the fields :
-
-- Success : **bool** Boolean indicating if authentication was successfull.
-- Message : **string**  Message if authentication failed.
-- ApWelcome : **APWelcome** ONLY FILLED IF AUTHENTICATION WAS SUCCESSFULL
-- ApFailed : **APFailed** ONLY FILLED IF AUTHENTICATION FAILED
+You can listen to the ConnectionInstantiated and ConnectionDropped events for information about the session. 
 
 Once authentication was successfull, you can proceed to generate a bearer token using:
-```SpotifyLibrary.Tokens.GetToken()```
+```SpotifyClient.Tokens.GetToken()```
 
 ```
 var tokensClient = newSpotifyClient.Tokens;
-var myBearerKey = tokensClient.GetToken("playlist-read")
+var myBearerKey = await tokensClient.GetToken(CancellationToken.None, "playlist-read")
 ```
 
 All bearer keys are valid for 1 hour and are reused. 
