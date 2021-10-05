@@ -1,7 +1,9 @@
 ﻿namespace SpotifyLib
 {
-    internal static class Consts
+    public static class Consts
     {
+        public static readonly int CHUNK_SIZE = 128 * 1024 * 2;
+
         internal static readonly byte[] ServerKey =
         {
             0xac, 0xe0, 0x46, 0x0b, 0xff, 0xc2, 0x30, 0xaf,

@@ -117,7 +117,8 @@ namespace SpotifyLib.Helpers
             ProvidedTrack subject,
             ContextTrack track)
         {
-            if (track.HasUri && !object.Equals(subject.Uri, track.Uri))
+            if (track.HasUri && !
+                track.Uri.IsEmpty() && !subject.Uri.IsEmpty()&& !object.Equals(subject.Uri, track.Uri))
                 throw new Exception("Illegal Argument");
 
             foreach (var a in track.Metadata)
@@ -306,6 +307,7 @@ namespace SpotifyLib.Helpers
 
             if (!string.IsNullOrEmpty(track.Uri))
                 b.Uri = track.Uri;
+      
             if (track.Metadata.ContainsKey("album_uri"))
                 b.AlbumUri = track.Metadata["album_uri"];
             if (track.Metadata.ContainsKey("artist_uri"))

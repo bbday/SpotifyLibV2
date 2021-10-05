@@ -31,6 +31,7 @@ namespace SpotifyLib
         private readonly string _username;
         private readonly ByteString _data;
         private readonly AuthenticationType _type;
+
         public StoredAuthenticator(string username,
             ByteString data,
             AuthenticationType type)
@@ -48,6 +49,7 @@ namespace SpotifyLib
                 Typ = _type
             };
     }
+
     public readonly struct UserpassAuthenticator : IAuthenticator
     {
         private readonly string _username;
@@ -112,6 +114,8 @@ namespace SpotifyLib
             Config = config;
         }
 
+        internal volatile int AudioKeySequence;
+        internal AsyncLock AudioKeyLock { get; set; }
         internal AsyncLock TokenLock { get; set; }
         internal AsyncLock SendLock { get; set; }
         internal AsyncLock ReceiveLock { get; set; }
@@ -120,7 +124,9 @@ namespace SpotifyLib
         internal Shannon RecvCipher { get; private set; }
         internal Shannon SendCipher { get; private set; }
         public APWelcome ApWelcome { get; private set; }
-        public static Task<SpotifyConnectionState> Connect(string host, int port, IAuthenticator authenticator, SpotifyConfig config,
+
+        public static Task<SpotifyConnectionState> Connect(string host, int port, IAuthenticator authenticator,
+            SpotifyConfig config,
             CancellationToken ct = default) => Task.Run(async () =>
         {
             var connection = new SpotifyConnectionState(host, port, authenticator, config);
@@ -129,6 +135,7 @@ namespace SpotifyLib
             connection.TcpConnection?.Dispose();
             connection._waiters =
                 new ConcurrentDictionary<long, (AsyncAutoResetEvent Waiter, MercuryResponse? Response)>();
+            connection._audioKeys = new ConcurrentDictionary<int, (AsyncAutoResetEvent Waiter, byte[])>();
             connection._partials = new ConcurrentDictionary<long, List<byte[]>>();
             connection.Tokens = new ConcurrentBag<MercuryToken>();
             connection.TcpConnection = new TcpClient(connection.Host, connection.Port)
@@ -141,6 +148,8 @@ namespace SpotifyLib
             connection.TokenLock = new AsyncLock();
             connection.SendLock = new AsyncLock();
             connection.ReceiveLock = new AsyncLock();
+            connection.AudioKeyLock = new AsyncLock();
+            connection.AudioKeySequence = 0;
             connection.Sequence = 0;
 
             var keys = new DiffieHellman();
@@ -257,14 +266,17 @@ namespace SpotifyLib
                 default:
                     throw new UnknownDataException($"Invalid package type: {packet.Cmd}", packet.Payload);
             }
+
             #endregion
         }, ct);
+
         public void Dispose()
         {
             TcpConnection?.Dispose();
             PackageListenerToken?.Dispose();
             DisposedCalled?.Invoke(this, EventArgs.Empty);
         }
+
         private async Task WaitForPackages(CancellationToken cancellationToken)
         {
             using var linked =
@@ -309,6 +321,10 @@ namespace SpotifyLib
                             // con.HandleMercury(newPacket);
                             _ = HandleMercuryAsync(newPacket, linked.Token);
                             break;
+                        case MercuryPacketType.AesKeyError:
+                        case MercuryPacketType.AesKey:
+                            _ = HandleAesKey(newPacket, linked.Token);
+                            break;
                     }
                 }
                 catch (Exception x)
@@ -321,32 +337,70 @@ namespace SpotifyLib
                 }
             }
         }
+
+        private async Task HandleAesKey(MercuryPacket packet, CancellationToken ct = default)
+        {
+            using var payload = new MemoryStream(packet.Payload);
+            var seq = 0;
+            var buffer = packet.Payload;
+            seq = packet.Payload.getInt((int) payload.Position, true);
+            payload.Seek(4, SeekOrigin.Current);
+            if (!_audioKeys.ContainsKey(seq))
+            {
+                Debug.WriteLine("Couldn't find callback for seq: " + seq);
+                return;
+            }
+
+            var p = _audioKeys[seq];
+            switch (packet.Cmd)
+            {
+                case MercuryPacketType.AesKey:
+                    var key = new byte[16];
+                    payload.Read(key, 0, key.Length);
+                    p.Item2 = key;
+                    break;
+                case MercuryPacketType.AesKeyError:
+                    var code = packet.Payload.getShort((int) payload.Position, true);
+                    payload.Seek(2, SeekOrigin.Current);
+                    //TODO: Error
+                    Debugger.Break();
+                    break;
+                default:
+                    Debug.WriteLine("Couldn't handle packet, cmd: {0}, length: {1}", packet.Cmd, packet.Payload.Length);
+                    break;
+
+            }
+
+            _audioKeys[seq] = p;
+            _audioKeys[seq].Waiter.Set();
+        }
+
         private async Task HandleMercuryAsync(MercuryPacket packet, CancellationToken ct = default)
         {
             using var stream = new MemoryStream(packet.Payload);
-            int seqLength = packet.Payload.getShort((int)stream.Position, true);
+            int seqLength = packet.Payload.getShort((int) stream.Position, true);
             stream.Seek(2, SeekOrigin.Current);
             long seq = 0;
             var buffer = packet.Payload;
             switch (seqLength)
             {
                 case 2:
-                    seq = packet.Payload.getShort((int)stream.Position, true);
+                    seq = packet.Payload.getShort((int) stream.Position, true);
                     stream.Seek(2, SeekOrigin.Current);
                     break;
                 case 4:
-                    seq = packet.Payload.getInt((int)stream.Position, true);
+                    seq = packet.Payload.getInt((int) stream.Position, true);
                     stream.Seek(4, SeekOrigin.Current);
                     break;
                 case 8:
-                    seq = packet.Payload.getLong((int)stream.Position, true);
+                    seq = packet.Payload.getLong((int) stream.Position, true);
                     stream.Seek(8, SeekOrigin.Current);
                     break;
             }
 
-            var flags = packet.Payload[(int)stream.Position];
+            var flags = packet.Payload[(int) stream.Position];
             stream.Seek(1, SeekOrigin.Current);
-            var parts = packet.Payload.getShort((int)stream.Position, true);
+            var parts = packet.Payload.getShort((int) stream.Position, true);
             stream.Seek(2, SeekOrigin.Current);
 
             _partials.TryGetValue(seq, out var partial);
@@ -362,7 +416,7 @@ namespace SpotifyLib
 
             for (var j = 0; j < parts; j++)
             {
-                var size = packet.Payload.getShort((int)stream.Position, true);
+                var size = packet.Payload.getShort((int) stream.Position, true);
                 stream.Seek(2, SeekOrigin.Current);
 
                 var buffer2 = new byte[size];
@@ -370,7 +424,7 @@ namespace SpotifyLib
                 var end = buffer2.Length;
                 for (var z = 0; z < end; z++)
                 {
-                    var a = packet.Payload[(int)stream.Position];
+                    var a = packet.Payload[(int) stream.Position];
                     stream.Seek(1, SeekOrigin.Current);
                     buffer2[z] = a;
                 }
@@ -392,6 +446,7 @@ namespace SpotifyLib
                 Debug.WriteLine($"Couldn't parse header! bytes: {partial.First().BytesToHex()}");
                 throw ex;
             }
+
             var resp = new MercuryResponse(header, partial, seq);
             switch (packet.Cmd)
             {
@@ -407,15 +462,18 @@ namespace SpotifyLib
             }
         }
 
+        internal ConcurrentDictionary<int, (AsyncAutoResetEvent Waiter, byte[])> _audioKeys;
         internal ConcurrentDictionary<long, (AsyncAutoResetEvent Waiter, MercuryResponse? Response)> _waiters;
 
         internal ConcurrentDictionary<long, List<byte[]>>
             _partials;
+
         internal ConcurrentBag<MercuryToken> Tokens;
 
         public event EventHandler<Exception> ConnectionException;
 
         private CancellationTokenSource PackageListenerToken { get; set; }
+
         public bool IsConnected
         {
             get
@@ -434,6 +492,7 @@ namespace SpotifyLib
 
         //TODO
         public Dictionary<string, string> UserAttributes { get; } = new Dictionary<string, string>();
+        public string Country { get; private set; }
 
         internal int SearchSequence;
 
@@ -449,9 +508,9 @@ namespace SpotifyLib
                 var cmd = packet.Cmd;
                 using (await SendLock.LockAsync(ct))
                 {
-                    var payloadLengthAsByte = BitConverter.GetBytes((short)payload.Length).Reverse().ToArray();
+                    var payloadLengthAsByte = BitConverter.GetBytes((short) payload.Length).Reverse().ToArray();
                     using var yetAnotherBuffer = new MemoryStream(3 + payload.Length);
-                    yetAnotherBuffer.WriteByte((byte)cmd);
+                    yetAnotherBuffer.WriteByte((byte) cmd);
                     await yetAnotherBuffer.WriteAsync(payloadLengthAsByte, 0, payloadLengthAsByte.Length, ct);
                     await yetAnotherBuffer.WriteAsync(payload, 0, payload.Length, ct);
 
@@ -490,7 +549,7 @@ namespace SpotifyLib
                 RecvCipher.decrypt(headerBytes);
 
                 var cmd = headerBytes[0];
-                var payloadLength = (short)((headerBytes[1] << 8) | (headerBytes[2] & 0xFF));
+                var payloadLength = (short) ((headerBytes[1] << 8) | (headerBytes[2] & 0xFF));
 
                 var payloadBytes = new byte[payloadLength];
                 await networkStream.ReadCompleteAsync(payloadBytes, 0, payloadBytes.Length, ct);
@@ -501,7 +560,7 @@ namespace SpotifyLib
 
                 var expectedMac = new byte[4];
                 RecvCipher.finish(expectedMac);
-                return new MercuryPacket((MercuryPacketType)cmd, payloadBytes);
+                return new MercuryPacket((MercuryPacketType) cmd, payloadBytes);
             }
         }, ct);
 
@@ -519,13 +578,14 @@ namespace SpotifyLib
             return SendPackageAsync(new MercuryPacket(MercuryPacketType.PreferredLocale,
                 preferredLocale.ToArray()), ct);
         }
+
         public async Task<T> SendAndReceiveAsJson<T>(
             string mercuryUri,
             MercuryRequestType type = MercuryRequestType.Get,
             CancellationToken ct = default)
         {
             var response = await SendAndReceiveAsResponse(mercuryUri, type, ct);
-            if (response is { StatusCode: >= 200 and < 300 })
+            if (response is {StatusCode: >= 200 and < 300})
             {
                 return Deserialize<T>(response.Value);
             }
@@ -538,7 +598,7 @@ namespace SpotifyLib
             CancellationToken ct = default)
         {
             var response = await SendAndReceiveAsResponse(mercuryUri, type, ct);
-            if (response is { StatusCode: >= 200 and < 300 })
+            if (response is {StatusCode: >= 200 and < 300})
             {
                 return Encoding.UTF8.GetString(response.Value.Payload.SelectMany(a => a)
                     .ToArray());
@@ -546,6 +606,7 @@ namespace SpotifyLib
 
             throw new MercuryException(response);
         }
+
         public Task<MercuryResponse?> SendAndReceiveAsResponse(
             string mercuryUri,
             MercuryRequestType type = MercuryRequestType.Get,
@@ -564,7 +625,7 @@ namespace SpotifyLib
             var requestHeader = req.Header;
 
             using var bytesOut = new MemoryStream();
-            var s4B = BitConverter.GetBytes((short)4).Reverse().ToArray();
+            var s4B = BitConverter.GetBytes((short) 4).Reverse().ToArray();
             bytesOut.Write(s4B, 0, s4B.Length); // Seq length
 
             var seqB = BitConverter.GetBytes(sequence).Reverse()
@@ -572,11 +633,11 @@ namespace SpotifyLib
             bytesOut.Write(seqB, 0, seqB.Length); // Seq
 
             bytesOut.WriteByte(1); // Flags
-            var reqpB = BitConverter.GetBytes((short)(1 + requestPayload.Length)).Reverse().ToArray();
+            var reqpB = BitConverter.GetBytes((short) (1 + requestPayload.Length)).Reverse().ToArray();
             bytesOut.Write(reqpB, 0, reqpB.Length); // Parts count
 
             var headerBytes2 = requestHeader.ToByteArray();
-            var hedBls = BitConverter.GetBytes((short)headerBytes2.Length).Reverse().ToArray();
+            var hedBls = BitConverter.GetBytes((short) headerBytes2.Length).Reverse().ToArray();
 
             bytesOut.Write(hedBls, 0, hedBls.Length); // Header length
             bytesOut.Write(headerBytes2, 0, headerBytes2.Length); // Header
@@ -585,7 +646,7 @@ namespace SpotifyLib
             foreach (var part in requestPayload)
             {
                 // Parts
-                var l = BitConverter.GetBytes((short)part.Length).Reverse().ToArray();
+                var l = BitConverter.GetBytes((short) part.Length).Reverse().ToArray();
                 bytesOut.Write(l, 0, l.Length);
                 bytesOut.Write(part, 0, part.Length);
             }
@@ -614,7 +675,7 @@ namespace SpotifyLib
                 {
                     Platform = Platform.Win32X86,
                     Product = Product.Client,
-                    ProductFlags = { ProductFlags.ProductFlagNone },
+                    ProductFlags = {ProductFlags.ProductFlagNone},
                     Version = 112800721
                 }
             };
@@ -672,7 +733,7 @@ namespace SpotifyLib
             for (var i = 1; i < 6; i++)
             {
                 mac.TransformBlock(binaryData, 0, binaryData.Length, null, 0);
-                var temp = new[] { (byte)i };
+                var temp = new[] {(byte) i};
                 mac.TransformBlock(temp, 0, temp.Length, null, 0);
                 mac.TransformFinalBlock(new byte[0], 0, 0);
                 var final = mac.Hash;
@@ -713,21 +774,24 @@ namespace SpotifyLib
         private static ClientResponseEncrypted GetNewEncrypted(
             LoginCredentials credentials,
             SpotifyConfig config) => new()
+        {
+            LoginCredentials = credentials,
+            SystemInfo = new SystemInfo
             {
-                LoginCredentials = credentials,
-                SystemInfo = new SystemInfo
-                {
-                    Os = Os.Windows,
-                    CpuFamily = CpuFamily.CpuX86,
-                    SystemInformationString = "1",
-                    DeviceId = config.DeviceId
-                },
-                VersionString = "1.0"
-            };
+                Os = Os.Windows,
+                CpuFamily = CpuFamily.CpuX86,
+                SystemInformationString = "1",
+                DeviceId = config.DeviceId
+            },
+            VersionString = "1.0"
+        };
+
         #region Other
+
         private static T Deserialize<T>(MercuryResponse resp) =>
             System.Text.Json.JsonSerializer.Deserialize<T>(
                 new ReadOnlySpan<byte>(resp.Payload.SelectMany(z => z).ToArray()), opts);
+
         #endregion
 
         private static readonly JsonSerializerOptions opts = new JsonSerializerOptions
@@ -754,6 +818,7 @@ namespace SpotifyLib
                 return newToken;
             }
         }
+
         internal MercuryToken? FindNonExpiredToken()
         {
             var a =
@@ -761,6 +826,39 @@ namespace SpotifyLib
             if (string.IsNullOrEmpty(a.AccessToken)) return null;
             return a;
         }
+
         const string KEYMASTER_CLIENT_ID = "65b708073fc0480ea92a077233ca87bd";
+
+        public async Task<byte[]> GetAudioKey(ByteString gid, ByteString fileId,
+            bool retry = true,
+            CancellationToken ct = default)
+        {
+            var r = 
+                Interlocked.Increment(ref AudioKeySequence);
+            using var @out = new MemoryStream();
+            fileId.WriteTo(@out);
+            gid.WriteTo(@out);
+            var b = r.ToByteArray();
+            @out.Write(b, 0, b.Length);
+            @out.Write(ZERO_SHORT, 0, ZERO_SHORT.Length);
+           
+            var callback = new AsyncAutoResetEvent();
+            _audioKeys.TryAdd(r, (callback, null));
+
+            await SendPackageAsync(new MercuryPacket(MercuryPacketType.RequestKey, @out.ToArray()),
+                ct);
+            
+            await callback.WaitAsync(ct);
+            var key = _audioKeys[r].Item2;
+            if (key != null) return key;
+            if (retry) return await GetAudioKey(gid, fileId, false);
+            throw new AesKeyException(
+                $"Failed fetching audio key! gid: " +
+                $"{gid.ToByteArray().BytesToHex()}," +
+                $" fileId: {fileId.ToByteArray().BytesToHex()}");
+        }
+
+        private static readonly byte[] ZERO_SHORT = new byte[] {0, 0};
+
     }
 }

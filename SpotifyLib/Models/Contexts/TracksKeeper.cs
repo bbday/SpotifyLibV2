@@ -438,10 +438,11 @@ namespace SpotifyLib.Models.Contexts
         {
             if (_isPlayingQueue)
             {
-                _state.State.Track = ProtoUtils.ConvertToProvidedTrack(_queue.First.Value);
+                _state.State.Track = ProtoUtils.ConvertToProvidedTrack(_queue.First.Value, _state.Context.Uri);
                 _queue.RemoveFirst();
             }
-            else _state.State.Track = ProtoUtils.ConvertToProvidedTrack(Tracks[(int) GetCurrentTrackIndex()]);
+            else
+                _state.State.Track = ProtoUtils.ConvertToProvidedTrack(Tracks[(int) GetCurrentTrackIndex()]);
 
             UpdateLikeDislike();
 

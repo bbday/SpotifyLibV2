@@ -5,6 +5,7 @@ using Base62;
 using Connectstate;
 using Spotify.Metadata.Proto;
 using Spotify.Player.Proto;
+using SpotifyLib.Helpers;
 
 namespace SpotifyLib.Models
 {
@@ -41,7 +42,8 @@ namespace SpotifyLib.Models
             return new SpotifyId(track.Uri);
         }
 
-        public static SpotifyId From(ProvidedTrack track) => new SpotifyId(track.Uri);
+        public static SpotifyId From(ProvidedTrack track) => track.Uri.IsEmpty() ? new SpotifyId() : 
+            new SpotifyId(track.Uri);
 
 
         public static SpotifyId From(Track track)

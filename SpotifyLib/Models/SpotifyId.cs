@@ -127,5 +127,14 @@ namespace SpotifyLib.Models
         {
             return string.Compare(Uri, other.Uri, StringComparison.Ordinal);
         }
+
+        public static SpotifyId FromHex(string hex, AudioItemType type)
+        {
+            var k = Base62Test.Encode(Utils.HexToBytes(hex));
+            var j = $"spotify:{type.ToString().ToLower()}:" + Encoding.Default.GetString(k);
+            return new SpotifyId(j);
+        }
+        private static readonly Base62Test Base62Test
+            = Base62Test.CreateInstanceWithInvertedCharacterSet();
     }
 }

@@ -29,11 +29,29 @@ using Restrictions = Connectstate.Restrictions;
 
 namespace SpotifyLib
 {
-    public interface IAudioOutput
+    public enum AudioOutputStateChanged
+    {
+        Buffering,
+        Playing,
+        Paused,
+        Finished,
+        ManualSeek
+    }
+    public interface IAudioOutput : ISpotifyDevice
     {
         Task IncomingStream(ChunkedStream entry);
         void Resume(long position);
         void Pause();
+        event EventHandler<AudioOutputStateChanged> AudioOutputStateChanged;
+        int Position { get; }
+        /// <summary>
+        /// User is responsible for trying to cache the stream.
+        /// You are allowed to return null.
+        /// This forces the lib to fetch the stream from the spotify api.
+        /// </summary>
+        /// <param name="playable"></param>
+        /// <returns></returns>
+        Task<ChunkedStream?> GetCachedStream(SpotifyId playable);
     }
 
     public class SpotifyWebsocketState : IDisposable
@@ -164,7 +182,15 @@ namespace SpotifyLib
             private set
             {
                 _latestCluster = value;
-                ActiveDevice = new RemoteSpotifyDevice(value.Device[value.ActiveDeviceId], ConState.Config);
+                if (string.IsNullOrEmpty(value.ActiveDeviceId))
+                {
+                    ActiveDevice = AudioOutput;
+                }
+                else
+                {
+                    ActiveDevice = new RemoteSpotifyDevice(value.Device[value.ActiveDeviceId], ConState.Config);
+                }
+
                 ClusterUpdated?.Invoke(this, value);
             }
         }

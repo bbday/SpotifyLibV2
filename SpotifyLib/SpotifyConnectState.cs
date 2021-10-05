@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Connectstate;
+using Newtonsoft.Json.Linq;
 using Spotify.Player.Proto;
+using SpotifyLib.Enums;
 using SpotifyLib.Helpers;
 using SpotifyLib.Models;
 using SpotifyLib.Models.Contexts;
@@ -21,6 +24,26 @@ namespace SpotifyLib
         public SpotifyConnectState(SpotifyWebsocketState wsState)
         {
             WsState = wsState;
+            WsState.AudioOutput.AudioOutputStateChanged += (sender, changed) =>
+            {
+                switch (changed)
+                {
+                    case AudioOutputStateChanged.Buffering:
+                        if (!State.IsPaused)
+                        {
+                            State.IsBuffering = true;
+                            _ = wsState.UpdateState(PutStateReason.PlayerStateChanged, wsState.AudioOutput
+                                .Position);
+                        }
+                        break;
+                    case AudioOutputStateChanged.Playing:
+                        break;
+                    case AudioOutputStateChanged.Paused:
+                        break;
+                    case AudioOutputStateChanged.Finished:
+                        break;
+                }
+            };
             State = InitState(new PlayerState());
         }
         private static PlayerState InitState(PlayerState plstate)
@@ -75,17 +98,29 @@ namespace SpotifyLib
             var transitionInfo = TransitionInfo.ContextChange(this,
                 withSkip);
 
-            Session = new PlayerSession(WsState.AudioOutput,
+            if (Session != null)
+                Session.FinishedLoading -= SessionOnFinishedLoading;
+
+            Session = new PlayerSession(WsState,
                 sessionId);
+            Session.FinishedLoading += SessionOnFinishedLoading;
             //_events.SendEvent(new NewSessionIdEvent(sessionId, _stateWrapper).BuildEvent());
 
             await LoadTrack(play, transitionInfo);
         }
 
+        private void SessionOnFinishedLoading(object sender, ChunkedStream e)
+        {
+            EnrichWithMetadata(e);
+            State.IsBuffering = false;
+            _ = WsState.UpdateState(PutStateReason.PlayerStateChanged, WsState.AudioOutput
+                .Position);
+        }
+
         private async Task LoadTrack(bool willPlay, TransitionInfo transitionInfo)
         {
             Debug.WriteLine($"Loading track id: {GetCurrentPlayable.Uri}");
-            var playbackId = await Session.Load(GetCurrentPlayable,
+            var playbackId = await Session.Load(GetCurrentPlayableOrThrow,
                 (int)State.Position,
                 transitionInfo.StartedReason);
             State.PlaybackId = playbackId.PlaybackId;
@@ -104,7 +139,8 @@ namespace SpotifyLib
             get
             {
                 var id = GetCurrentPlayable;
-                if (id.Uri == null) throw new IllegalStateException();
+                if (id.Uri == null) 
+                    throw new IllegalStateException();
                 return id;
             }
         }
@@ -153,6 +189,78 @@ namespace SpotifyLib
                 .Replace('+', '-') // replace URL unsafe characters with safe ones
                 .Replace('/', '_') // replace URL unsafe characters with safe ones
                 .Replace("=", ""); // no padding
+        }
+        private void EnrichWithMetadata(ChunkedStream metadata)
+        {
+            if (metadata.TrackOrEpisode.Id.Type == AudioItemType.Track)
+            {
+                var track = metadata.TrackOrEpisode.Track;
+                if (State.Track == null) throw new NotImplementedException();
+
+                if (track.HasDuration) TracksKeeper.UpdateTrackDuration(track.Duration);
+
+                var b = State.Track;
+
+                if (track.HasPopularity) b.Metadata["popularity"] = track.Popularity.ToString();
+                if (track.HasExplicit) b.Metadata["is_explicit"] = track.Explicit.ToString().ToLower();
+                if (track.HasName) b.Metadata["title"] = track.Name;
+                if (track.HasDiscNumber) b.Metadata["album_disc_number"] = track.DiscNumber.ToString();
+                for (var i = 0; i < track.Artist.Count; i++)
+                {
+                    var artist = track.Artist[i];
+                    if (artist.HasName) b.Metadata["artist_name" + (i == 0 ? "" : (":" + i))] = artist.Name;
+                    if (artist.HasGid)
+                        b.Metadata["artist_uri" + (i == 0 ? "" : (":" + i))] =
+                            SpotifyId.FromHex(artist.Gid.ToByteArray().BytesToHex(), AudioItemType.Artist).Uri;
+                }
+
+                if (track.Album != null)
+                {
+                    var album = track.Album;
+                    if (album.Disc.Count > 0)
+                    {
+                        b.Metadata["album_track_count"] = album.Disc.Select(z => z.Track).Count().ToString();
+                        b.Metadata["album_disc_count"] = album.Disc.Count.ToString();
+                    }
+
+                    if (album.HasName) b.Metadata["album_title"] = album.Name;
+                    if (album.HasGid)
+                        b.Metadata["album_uri"] =
+                            SpotifyId.FromHex(album.Gid.ToByteArray().BytesToHex(), AudioItemType.Album).Uri;
+
+                    for (int i = 0; i < album.Artist.Count; i++)
+                    {
+                        var artist = album.Artist[i];
+                        if (artist.HasName)
+                            b.Metadata["album_artist_name" + (i == 0 ? "" : (":" + i))] = artist.Name;
+                        if (artist.HasGid)
+                            b.Metadata["album_artist_uri" + (i == 0 ? "" : (":" + i))] =
+                                SpotifyId.FromHex(artist.Gid.ToByteArray().BytesToHex(), AudioItemType.Artist).Uri;
+                    }
+
+                    if (track.HasDiscNumber)
+                    {
+                        b.Metadata["album_track_number"] =
+                            album.Disc.SelectMany(z => z.Track).ToList().FindIndex(k => k.Gid == track.Gid) +
+                            1.ToString();
+                    }
+
+                    if (album.CoverGroup?.Image != null
+                        && album.CoverGroup.Image.Count > 0)
+                        ImageId.PutAsMetadata(b, album.CoverGroup);
+                }
+
+
+                var k = new JArray();
+                foreach (var j in track.File
+                    .Where(z => z.HasFormat))
+                {
+                    k.Add(j.Format.ToString());
+                }
+
+                b.Metadata["available_file_formats"] = k.ToString();
+                State.Track = b;
+            }
         }
     }
 }
