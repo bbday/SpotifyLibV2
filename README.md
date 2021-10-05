@@ -1,51 +1,7 @@
 # SpotifyLib
 
-## Features
+Working on bringing back audio/better documentation, sorry!
 
-- Full accesss to all spotify api endpoints. Both REST & Mercury
-- Connect client 
-- Play audio
-- Cross platform (.NET Standard)
-
-The lib has been rewritten to suite a more data-oriented design.
-Over the past few years, I've grown to hate object oriented programming and so I decided to try data-oriented.
-
-## Examples
-
-### Authentication & Bearer
-
-All REST Clients and other clients are LazyLoaded, which means they are not fetched/initialized until the developer specifically requests them. 
-
-You can create a new instance of the class ```SpotifyClient```.
-
-The ```SpotifyClient.Authenticate``` function Which accepts the following paramemters
-
-- Type: locale (string)
-- Type: IAuthenticator:
--- Out of the box there are 2 implementations you can directly use. For userpass use ```UserPassAuthenticator```
-
-```
-var newSpotifyClient = new SpotifyClient();
-
-var userDataAuthenticator = new UserPassAuthenticator(USERNAME, PASSWORD);
-newSpotifyClient.Authenticate(userDataAuthenticator);
-```
-You can listen to the ConnectionInstantiated and ConnectionDropped events for information about the session. 
-
-Once authentication was successfull, you can proceed to generate a bearer token using:
-```SpotifyClient.Tokens.GetToken()```
-
-```
-var tokensClient = newSpotifyClient.Tokens;
-var myBearerKey = await tokensClient.GetToken(CancellationToken.None, "playlist-read")
-```
-
-All bearer keys are valid for 1 hour and are reused. 
-
-### Be careful!
-
-```GetToken()``` returns an instance of type ```StoredToken``` which has the field : ```AccessToken```.
-```StoredToken``` also implements ToString() so it may look like it is the actual bearer, but it is not.
 
 ## ABOUT
 a .NET Standard implementation of spotify.
