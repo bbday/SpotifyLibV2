@@ -70,16 +70,27 @@ namespace SpotifyLib
 
     public static class SpotifyClientMethods
     {
+        /// <summary>
+        /// Opens a TCP Connection to one of the AP(Access Point)s and attempts to authenticate the user.
+        /// </summary>
+        /// <param name="authenticator">Type of authenticators to use. Can be for exampel <see cref="UserpassAuthenticator"/> or <see cref="StoredAuthenticator"/></param>
+        /// <param name="config">Holds data like the config, device name and device id. See <see cref="SpotifyConfig"/>, for a default config use <see cref="SpotifyConfig.Default()"/></param>
+        /// <param name="ct">A <see cref="CancellationToken"/> for the asynchronous task(s).</param>
+        /// <returns>An isntance of type <see cref="SpotifyConnectionState"/></returns>
+        /// <exception cref="SpotifyConnectionException">Thrown whenever an issue with the CONNECTION between Spotify and your machine (not authorization) occurs.</exception>
+        /// <exception cref="SpotifyAuthenticationException">Thrown whenever a user enters bad credentials. Check <see cref="SpotifyAuthenticationException.Failed"/> for more details.
+        /// Specifically <see cref="APLoginFailed.ErrorCode"/></exception>
+        /// <exception cref="UnknownDataException">Thrown whenever junk is read. This usually indicates something is wrong with the library, as this should not be thrown!</exception>
+        /// <exception cref="IOException">Thrown whenever an issue occurs with the underlying socket. (can be independent of Spotify)</exception>
         public static async Task<SpotifyConnectionState>
             Authenticate(IAuthenticator authenticator,
                 SpotifyConfig config,
-                CancellationToken ct)
+                CancellationToken ct = default)
         {
             var a = await ApResolver.GetClosestAccessPoint(ct);
             var (host, port) = a.First();
             Debug.WriteLine($"Fetched: {host}:{port} as AP.");
-            var connectionState = new SpotifyConnectionState(host, port, authenticator, config);
-            return await 
+            return await
                 SpotifyConnectionState.Connect(host, port, authenticator, config, ct);
         }
     }
@@ -239,7 +250,7 @@ namespace SpotifyLib
                     await connection.UpdateLocaleAsync(connection.Config.Locale, ct);
                     connection.ApWelcome = apWelcome;
                     return connection;
-                  //  return new SpotifyClient(config, apWelcome, tcpClient, authenticator);
+                    //  return new SpotifyClient(config, apWelcome, tcpClient, authenticator);
                     break;
                 case MercuryPacketType.AuthFailure:
                     throw new SpotifyAuthenticationException(APLoginFailed.Parser.ParseFrom(packet.Payload));
@@ -402,7 +413,7 @@ namespace SpotifyLib
             _partials;
         internal ConcurrentBag<MercuryToken> Tokens;
 
-        public event EventHandler<Exception> ConnectionException; 
+        public event EventHandler<Exception> ConnectionException;
 
         private CancellationTokenSource PackageListenerToken { get; set; }
         public bool IsConnected
@@ -492,7 +503,7 @@ namespace SpotifyLib
         }, ct);
 
 
-        public Task UpdateLocaleAsync(string locale, CancellationToken ct) 
+        public Task UpdateLocaleAsync(string locale, CancellationToken ct)
         {
             using var preferredLocale = new MemoryStream(18 + 5);
             preferredLocale.WriteByte(0x0);
@@ -550,7 +561,7 @@ namespace SpotifyLib
             var requestHeader = req.Header;
 
             using var bytesOut = new MemoryStream();
-            var s4B = BitConverter.GetBytes((short) 4).Reverse().ToArray();
+            var s4B = BitConverter.GetBytes((short)4).Reverse().ToArray();
             bytesOut.Write(s4B, 0, s4B.Length); // Seq length
 
             var seqB = BitConverter.GetBytes(sequence).Reverse()
@@ -558,11 +569,11 @@ namespace SpotifyLib
             bytesOut.Write(seqB, 0, seqB.Length); // Seq
 
             bytesOut.WriteByte(1); // Flags
-            var reqpB = BitConverter.GetBytes((short) (1 + requestPayload.Length)).Reverse().ToArray();
+            var reqpB = BitConverter.GetBytes((short)(1 + requestPayload.Length)).Reverse().ToArray();
             bytesOut.Write(reqpB, 0, reqpB.Length); // Parts count
 
             var headerBytes2 = requestHeader.ToByteArray();
-            var hedBls = BitConverter.GetBytes((short) headerBytes2.Length).Reverse().ToArray();
+            var hedBls = BitConverter.GetBytes((short)headerBytes2.Length).Reverse().ToArray();
 
             bytesOut.Write(hedBls, 0, hedBls.Length); // Header length
             bytesOut.Write(headerBytes2, 0, headerBytes2.Length); // Header
@@ -571,7 +582,7 @@ namespace SpotifyLib
             foreach (var part in requestPayload)
             {
                 // Parts
-                var l = BitConverter.GetBytes((short) part.Length).Reverse().ToArray();
+                var l = BitConverter.GetBytes((short)part.Length).Reverse().ToArray();
                 bytesOut.Write(l, 0, l.Length);
                 bytesOut.Write(part, 0, part.Length);
             }
