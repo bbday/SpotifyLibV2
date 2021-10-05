@@ -12,14 +12,15 @@ namespace SpotifyLib.Models
     }
     public readonly struct SpotifyWebsocketRequest : ISpotifyWsMsg
     {
-        public SpotifyWebsocketRequest(string mid, int pid, string sender, JObject command)
+        public SpotifyWebsocketRequest(string mid, int pid, string sender, JObject command, string key)
         {
             Mid = mid;
             Pid = pid;
             Sender = sender;
             Command = command;
+            Key = key;
         }
-
+        public string Key { get; }
         public string Mid { get; }
         public int Pid { get; }
         public string Sender { get; }

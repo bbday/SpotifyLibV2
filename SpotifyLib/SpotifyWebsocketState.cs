@@ -15,29 +15,39 @@ using System.Web;
 using Connectstate;
 using Google.Protobuf;
 using Newtonsoft.Json.Linq;
+using Org.BouncyCastle.Asn1.Ocsp;
+using Spotify.Player.Proto;
+using Spotify.Player.Proto.Transfer;
 using SpotifyLib.Helpers;
 using SpotifyLib.Models;
+using SpotifyLib.Models.Contexts;
+using SpotifyLib.Models.Player;
 using SpotifyLib.Models.Response;
 using Websocket.Client;
+using ContextPlayerOptions = Connectstate.ContextPlayerOptions;
+using Restrictions = Connectstate.Restrictions;
 
 namespace SpotifyLib
 {
     public interface IAudioOutput
     {
+        Task IncomingStream(ChunkedStream entry);
+        void Resume(long position);
+        void Pause();
     }
 
     public class SpotifyWebsocketState : IDisposable
     {
         private readonly WebsocketClient _client;
-        private readonly SpotifyConnectionState _conState;
+        internal readonly SpotifyConnectionState ConState;
         private readonly CancellationToken _ct;
-        private readonly IAudioOutput? _audioOutput;
+        internal readonly IAudioOutput? AudioOutput;
         private readonly CancellationTokenSource _pingTokenSource;
         private readonly CancellationTokenSource _linkedToken;
         private readonly IDisposable[] _disposables = new IDisposable[2];
         private Cluster _latestCluster;
         private ISpotifyDevice _activeDevce;
-
+        private readonly SpotifyConnectState _connectStateHolder;
         internal SpotifyWebsocketState(
             WebsocketClient client,
             SpotifyConnectionState conState,
@@ -45,9 +55,9 @@ namespace SpotifyLib
         {
             _pingTokenSource = new CancellationTokenSource();
             _ct = ct;
-            _audioOutput = audioOutput;
+            AudioOutput = audioOutput;
             _client = client;
-            _conState = conState;
+            ConState = conState;
             _disposables[0] = _client.MessageReceived
                 .Where(msg => msg.Text != null)
                 .Where(msg => msg.Text.StartsWith("{"))
@@ -57,7 +67,7 @@ namespace SpotifyLib
             {
                 Debug.WriteLine(info.Exception.ToString());
                 WaitForConnectionId.Reset();
-                _client.Url = await GetUri(_conState, CancellationToken.None);
+                _client.Url = await GetUri(ConState, CancellationToken.None);
                 await _client.Start();
             });
 
@@ -91,8 +101,8 @@ namespace SpotifyLib
                     {
                         CanPlay = true,
                         Volume = 65536,
-                        Name = _conState.Config.DeviceName,
-                        DeviceId = _conState.Config.DeviceId,
+                        Name = ConState.Config.DeviceName,
+                        DeviceId = ConState.Config.DeviceId,
                         DeviceType = DeviceType.Computer,
                         DeviceSoftwareVersion = "Spotify-11.1.0",
                         SpircVersion = "3.2.6",
@@ -138,6 +148,7 @@ namespace SpotifyLib
                     }
                 }
             };
+            _connectStateHolder = new SpotifyConnectState(this);
         }
 
         internal PutStateRequest PutState { get; }
@@ -153,7 +164,7 @@ namespace SpotifyLib
             private set
             {
                 _latestCluster = value;
-                ActiveDevice = new RemoteSpotifyDevice(value.Device[value.ActiveDeviceId], _conState.Config);
+                ActiveDevice = new RemoteSpotifyDevice(value.Device[value.ActiveDeviceId], ConState.Config);
                 ClusterUpdated?.Invoke(this, value);
             }
         }
@@ -184,7 +195,7 @@ namespace SpotifyLib
                 PutHttpClient = new HttpClient(new LoggingHandler(new HttpClientHandler
                 {
                     AutomaticDecompression = DecompressionMethods.GZip
-                }, _conState))
+                }, ConState))
                 {
                     BaseAddress = new Uri(await ApResolver.GetClosestSpClient())
                 };
@@ -210,11 +221,14 @@ namespace SpotifyLib
                         }
                         break;
                     case SpotifyWebsocketRequest req:
+                        var result =
+                            await Task.Run(() => OnRequest(req));
+                        SendReply(req.Key, result);
+                        Debug.WriteLine("Handled request. key: {0}, result: {1}", req.Key, result);
                         break;
                 }
             }
         }
-
         internal async Task<byte[]> UpdateState(
             PutStateReason reason, int playertime = -1)
         {
@@ -237,7 +251,7 @@ namespace SpotifyLib
             content.Headers.ContentEncoding.Add("gzip");
 
             var res = await PutHttpClient
-                .PutAsync($"/connect-state/v1/devices/{_conState.Config.DeviceId}", content, _ct);
+                .PutAsync($"/connect-state/v1/devices/{ConState.Config.DeviceId}", content, _ct);
             if (res.IsSuccessStatusCode)
             {
                 return await res.Content.ReadAsByteArrayAsync();
@@ -246,7 +260,91 @@ namespace SpotifyLib
             throw new HttpRequestException(res.StatusCode.ToString());
         }
 
+        internal async Task<RequestResult> OnRequest(SpotifyWebsocketRequest req)
+        {
+            PutState.LastCommandMessageId = (uint) req.Pid;
+            PutState.LastCommandSentByDeviceId = req.Sender;
+            var endpoint = req.Command["endpoint"].ToString()
+                .StringToEndPoint();
+            var cmd = new CommandBody(req.Command);
+            switch (endpoint)
+            {
+                case Endpoint.Transfer:
+                    try
+                    {
+                        await HandleTransferState(TransferState.Parser.ParseFrom(cmd.Data));
+                        return RequestResult.Success;
+                    }
+                    catch (Exception x)
+                    {
+                        //TODO: Notify user?
+                        Debug.WriteLine(x.ToString());
+                        return RequestResult.UpstreamError;
+                    }
+                    break;
+                default:
+                    return RequestResult.DeviceDoesNotSupportCommand;
+            }
+        }
 
+        private async Task HandleTransferState(TransferState cmd)
+        {
+            Debug.WriteLine($"Loading context (transfer): {cmd.CurrentSession.Context.Uri}");
+
+            var ps = cmd.CurrentSession;
+            _connectStateHolder.State.PlayOrigin = ProtoUtils.ConvertPlayOrigin(ps.PlayOrigin);
+            _connectStateHolder.State.Options = ProtoUtils.ConvertPlayerOptions(cmd.Options);
+            var sessionId = _connectStateHolder.SetContext(ps.Context);
+
+            var playback = cmd.Playback;
+            try
+            {
+                await _connectStateHolder.TracksKeeper.InitializeFrom(list => list.FindIndex(a =>
+                        (a.HasUid && ps.CurrentUid.Equals(a.Uid)) || ProtoUtils.TrackEquals(a, playback.CurrentTrack)),
+                    playback.CurrentTrack, cmd.Queue);
+            }
+            catch (IllegalStateException ex)
+            {
+                Debug.WriteLine(ex.ToString());
+                await _connectStateHolder.TracksKeeper.InitializeStart();
+            }
+
+            _connectStateHolder.State.PositionAsOfTimestamp = playback.PositionAsOfTimestamp;
+            if (playback.IsPaused) _connectStateHolder.State.Timestamp = TimeHelper.CurrentTimeMillisSystem;
+            else _connectStateHolder.State.Timestamp = playback.Timestamp;
+
+
+            await _connectStateHolder
+                .LoadSession(sessionId, !cmd.Playback.IsPaused, true);
+        }
+
+        internal void SetDeviceIsActive(bool active)
+        {
+            if (active)
+            {
+                if (!PutState.IsActive)
+                {
+                    long now = TimeHelper.CurrentTimeMillisSystem;
+                    PutState.IsActive = true;
+                    PutState.StartedPlayingAt = (ulong)now;
+                    Debug.WriteLine("Device is now active. ts: {0}", now);
+                }
+            }
+            else
+            {
+                PutState.IsActive = false;
+                PutState.StartedPlayingAt = 0L;
+            }
+        }
+
+        private void SendReply(string key, RequestResult result)
+        {
+            var success = result == RequestResult.Success;
+            var reply =
+                $"{{\"type\":\"reply\", \"key\": \"{key.ToLower()}\", \"payload\": {{\"success\": {success.ToString().ToLowerInvariant()}}}}}";
+            Debug.WriteLine(reply);
+            _client.Send(reply);
+        }
         /// <summary>
         /// Attemps to connect to the wss:// socket to listen for remote commands/requests.
         /// </summary>
@@ -326,7 +424,7 @@ namespace SpotifyLib
                     Debug.WriteLine("Received request. mid: {0}, key: {1}, pid: {2}, sender: {3}", mid, key, pid,
                         sender);
 
-                    return new SpotifyWebsocketRequest(mid, pid, sender, (JObject) command);
+                    return new SpotifyWebsocketRequest(mid, pid, sender, (JObject) command, key);
                 }
                     break;
                 case "message":
@@ -382,7 +480,7 @@ namespace SpotifyLib
         public void Dispose()
         {
             _client?.Dispose();
-            _conState?.Dispose();
+            ConState?.Dispose();
             _pingTokenSource?.Dispose();
             _linkedToken?.Dispose();
             foreach (var disposable in _disposables)

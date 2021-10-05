@@ -432,6 +432,9 @@ namespace SpotifyLib
             }
         }
 
+        //TODO
+        public Dictionary<string, string> UserAttributes { get; } = new Dictionary<string, string>();
+
         internal int SearchSequence;
 
         /// <summary>
@@ -599,8 +602,8 @@ namespace SpotifyLib
             await SendPackageAsync(new MercuryPacket(cmd, bytesOut.ToArray()), ct);
             await wait.WaitAsync(ct);
 
-            return
-                _waiters[sequence].Response;
+            _waiters.TryRemove(sequence, out var a);
+            return a.Response;
         }, ct);
 
         private static ClientHello ClientHello(byte[] publickey)

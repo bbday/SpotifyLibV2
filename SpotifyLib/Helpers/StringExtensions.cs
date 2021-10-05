@@ -1,11 +1,24 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Base62;
+using SpotifyLib.Models;
 
 namespace SpotifyLib.Helpers
 {
     public static class StringExtensions
     {
+        public static string ToHexId(this SpotifyId id)
+        { //TODO
+            var decoded = id.Id.FromBase62(true);
+            var hex = BitConverter.ToString(decoded).Replace("-", string.Empty);
+            if (hex.Length > 32)
+            {
+                hex = hex.Substring(hex.Length - 32, hex.Length - (hex.Length - 32));
+            }
+            return hex;
+        }
+        public static bool IsEmpty(this string str) => string.IsNullOrEmpty(str);
         public static LineSplitEnumerator SplitLines(this string str)
         {
             // LineSplitEnumerator is a struct so there is no allocation here
