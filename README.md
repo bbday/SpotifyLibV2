@@ -2,6 +2,30 @@
 
 Working on bringing back audio/better documentation, sorry!
 
+A real simple (Yet functional) program can be created using the following snippet if you wanna mess around:
+
+```
+   var mn = new ManualResetEvent(false);
+            var connState = await SpotifyClientMethods.Authenticate(
+                new UserpassAuthenticator("SPOTIFY EMAIL", "SPOTIFY PASSWORD"), SpotifyConfig.Default(),
+                CancellationToken.None);
+
+            var websocket = await SpotifyWebsocketState
+                .ConnectToRemote(connState);
+            Console.WriteLine($"Connected to ws with initial cluster: {websocket.LatestCluster.PlayerState.Track.Uri} " +
+                              $"on Device: {websocket.ActiveDevice.Name}");
+            websocket.ClusterUpdated += (sender, update) =>
+            {
+                Console.WriteLine($"New cluster: {update.PlayerState.Track?.Uri}");
+            };
+            websocket.ActiveDeviceChanged += (sender, tuple) =>
+            {
+                var (old, spotifyDevice) = tuple;
+                Console.WriteLine($"Device switched from {old?.Name} to {spotifyDevice?.Name}");
+            };
+
+            mn.WaitOne();
+```
 
 ## ABOUT
 a .NET Standard implementation of spotify.
