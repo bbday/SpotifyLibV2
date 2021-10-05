@@ -38,7 +38,7 @@ namespace SpotifyLib
         private Cluster _latestCluster;
         private ISpotifyDevice _activeDevce;
 
-        public SpotifyWebsocketState(
+        internal SpotifyWebsocketState(
             WebsocketClient client,
             SpotifyConnectionState conState,
             CancellationToken ct, IAudioOutput? audioOutput)
@@ -199,17 +199,17 @@ namespace SpotifyLib
             {
                 Debug.WriteLine($"Incoming ws message..");
                 var wsMessage = AdaptToWsMessage(JObject.Parse(obj.Text));
-                switch (wsMessage.MessageType)
+                switch (wsMessage)
                 {
-                    case MessageType.message:
-                        if (wsMessage.Uri.StartsWith("hm://connect-state/v1/cluster"))
+                    case SpotifyWebsocketMessage msg:
+                        if (msg.Uri.StartsWith("hm://connect-state/v1/cluster"))
                         {
-                            var update = ClusterUpdate.Parser.ParseFrom(wsMessage.Payload);
+                            var update = ClusterUpdate.Parser.ParseFrom(msg.Payload);
                             LatestCluster = update.Cluster;
                             ClusterUpdated?.Invoke(this, update.Cluster);
                         }
                         break;
-                    case MessageType.request:
+                    case SpotifyWebsocketRequest req:
                         break;
                 }
             }
@@ -247,6 +247,13 @@ namespace SpotifyLib
         }
 
 
+        /// <summary>
+        /// Attemps to connect to the wss:// socket to listen for remote commands/requests.
+        /// </summary>
+        /// <param name="connection"></param>
+        /// <param name="device"></param>
+        /// <param name="ct"></param>
+        /// <returns></returns>
         public static Task<SpotifyWebsocketState> ConnectToRemote(
             SpotifyConnectionState connection,
             IAudioOutput? device = null,
@@ -280,19 +287,50 @@ namespace SpotifyLib
             var headers = msg["headers"] as JObject;
             return headers?.ToObject<Dictionary<string, string>>();
         }
-        private static SpotifyWebsocketMessage
+        private static ISpotifyWsMsg
         AdaptToWsMessage(JObject obj)
         {
             switch (obj["type"]?.ToString())
             {
                 case "ping":
-                    return new SpotifyWebsocketMessage(null, null, new byte[0], MessageType.ping);
+                    return new Ping();
                     break;
                 case "pong":
-                    return new SpotifyWebsocketMessage(null, null, new byte[0], MessageType.pong);
+                    return new Pong();
                     break;
-                default:
+                case "request":
+                {
+                    Debug.Assert(obj != null, nameof(obj) + " != null");
+                    var mid = obj["message_ident"]?.ToString();
+                    var key = obj["key"]?.ToString();
+                    var headers = GetHeaders(obj);
+                    var payload = obj["payload"];
+
+                    using var @in = new MemoryStream();
+                    using var outputStream =
+                        new MemoryStream(Convert.FromBase64String(payload["compressed"].ToString()));
+                    if (headers["Transfer-Encoding"]?.Equals("gzip") ?? false)
                     {
+                        using var decompressionStream = new GZipStream(outputStream, CompressionMode.Decompress);
+                        decompressionStream.CopyTo(@in);
+                        Debug.WriteLine($"Decompressed");
+                        var jsonStr = Encoding.Default.GetString(@in.ToArray());
+                        payload = JObject.Parse(jsonStr);
+
+                    }
+
+                    var pid = payload["message_id"].ToObject<int>();
+                    var sender = payload["sent_by_device_id"]?.ToString();
+
+                    var command = payload["command"];
+                    Debug.WriteLine("Received request. mid: {0}, key: {1}, pid: {2}, sender: {3}", mid, key, pid,
+                        sender);
+
+                    return new SpotifyWebsocketRequest(mid, pid, sender, (JObject) command);
+                }
+                    break;
+                case "message":
+                {
                         var headers = GetHeaders(obj);
                         var uri = obj["uri"]?.ToString();
                         var payloads = (JArray)obj["payloads"];
@@ -333,8 +371,11 @@ namespace SpotifyLib
                             decodedPayload = new byte[0];
                         }
 
-                        return new SpotifyWebsocketMessage(uri, headers, decodedPayload, MessageType.message);
+                        return new SpotifyWebsocketMessage(uri, headers, decodedPayload);
                     }
+                default:
+                    Debugger.Break();
+                    throw new NotImplementedException();
             }
         }
 
