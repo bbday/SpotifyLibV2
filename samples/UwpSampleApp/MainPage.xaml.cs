@@ -9,6 +9,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Input;
 using Windows.ApplicationModel.Core;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
@@ -21,6 +22,7 @@ using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Navigation;
 using Connectstate;
+using Microsoft.Toolkit.Mvvm.Input;
 using Spotify.Metadata.Proto;
 using SpotifyLib;
 using SpotifyLib.Helpers;
@@ -61,6 +63,50 @@ namespace UwpSampleApp
         public MainPage()
         {
             InitializeComponent();
+            SkipNextCmd = new AsyncRelayCommand(async () =>
+            {
+                if (IsPlayingOnLocalDevice)
+                {
+
+                }
+                else
+                {
+                    var acknowledged = await _wsState.SendCommandToDevice(_wsState.ActiveDevice.DeviceId, new
+                    {
+                        command = new
+                        {
+                            endpoint = "skip_next"
+                        }
+                    });
+                }
+
+            }, () => (_wsState != null && _wsState.CanSkipNext) || (audioPlayer != null && audioPlayer.CanSkipNext));
+            SkipPrevCommand = new AsyncRelayCommand(async () =>
+            {
+                if (PositionMs > 30E3)
+                {
+                    //seek to 0
+                    SeekTo(0);
+                }
+                else
+                {
+                    if (IsPlayingOnLocalDevice)
+                    {
+                        //TODO
+                    }
+                    else
+                    {
+                        var acknowledged = await _wsState.SendCommandToDevice(_wsState.ActiveDevice.DeviceId, new
+                        {
+                            command = new
+                            {
+                                endpoint = "skip_prev"
+                            }
+                        });
+                    }
+                }
+            }, () => (_wsState != null && (PositionMs > 30E3 || _wsState.CanSkipPrevious))
+                     || (audioPlayer != null && (audioPlayer.Position > 30E3 || audioPlayer.CanSkipPrev)));
             _t = new DispatcherTimer
             {
                 Interval = TimeSpan.FromMilliseconds(500)
@@ -189,6 +235,7 @@ namespace UwpSampleApp
                         foreach (var remoteSpotifyDevice in list) AvailableDevices.Add(remoteSpotifyDevice);
                     });
             };
+
         }
 
         private async Task UpdateFromCluster(Cluster cluster, SpotifyConfig c)
@@ -224,6 +271,8 @@ namespace UwpSampleApp
             DurationMs = track.Duration;
             PositionMs = GetPosition(cluster.PlayerState);
             OnPropertyChanged(nameof(PlayingOnDeviceString));
+            SkipNextCmd.NotifyCanExecuteChanged();
+            SkipPrevCommand.NotifyCanExecuteChanged();
         }
 
         private void AudioPlayerOnAudioOutputStateChanged(object sender, AudioOutputStateChanged e)
@@ -242,6 +291,8 @@ namespace UwpSampleApp
                             IsPaused = true;
                             break;
                     }
+                    SkipNextCmd.NotifyCanExecuteChanged();
+                    SkipPrevCommand.NotifyCanExecuteChanged();
                     if (!(audioPlayer.CurrentStream?.TrackOrEpisode.Equals(_cur) ?? true))
                     {
                         //changed
@@ -341,6 +392,11 @@ namespace UwpSampleApp
 
 
         public bool IsPlayingOnLocalDevice => _wsState.ActiveDevice.Equals(audioPlayer);
+
+        public AsyncRelayCommand SkipPrevCommand { get; }
+
+        public AsyncRelayCommand SkipNextCmd { get; }
+
         private bool DragStarted;
         private void TimelineSlider_OnManipulationCompleted(object sender, ManipulationCompletedRoutedEventArgs e)
         {

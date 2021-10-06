@@ -82,6 +82,10 @@ namespace UwpSampleApp
 
         public event EventHandler<AudioOutputStateChanged> AudioOutputStateChanged;
         public int Position => (int) Math.Abs(_mediaPlayer.Time);
+        //TODO: Built a local queue somehow...
+        public bool CanSkipNext => false;
+        public bool CanSkipPrev => false;
+
         public void SetPos(double d) => _mediaPlayer.Time = (long)d; 
         public async Task<ChunkedStream> GetCachedStream(SpotifyId playable)
         {

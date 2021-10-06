@@ -187,6 +187,10 @@ namespace SpotifyLib
             }
         }
 
+        public bool CanSkipNext => !LatestCluster.PlayerState.Restrictions.DisallowSkippingNextReasons
+            .Any();
+        public bool CanSkipPrevious => !LatestCluster.PlayerState.Restrictions.DisallowSkippingPrevReasons
+            .Any();
         private async void OnMessageReceived((Dictionary<string, string>, string Text) obj)
         {
             if (obj.Item1 == null) return;
