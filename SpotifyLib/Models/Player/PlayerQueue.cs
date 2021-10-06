@@ -21,7 +21,7 @@ namespace SpotifyLib.Models.Player
             queue.Head = tmp;
             return true;
         }
-        public static void Add(ChunkedStream entry, 
+        public static async Task Add(ChunkedStream entry, 
             IAudioOutput player,
             PlayerQueue queue)
         {
@@ -42,7 +42,7 @@ namespace SpotifyLib.Models.Player
 
             queue.Head = head;
             //Play item on player.
-            _ = player.IncomingStream(entry);
+            await player.IncomingStream(entry);
             Debug.WriteLine($"Added to queue {entry}");
         }
     }

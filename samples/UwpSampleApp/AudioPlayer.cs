@@ -11,6 +11,8 @@ namespace UwpSampleApp
 {
     public class AudioPlayer : IAudioOutput
     {
+        private bool did_set_transfer = false;
+        private long transfer_pos = -1;
         public AudioPlayer(SpotifyConfig spotifyConfig)
         {
             DeviceId = spotifyConfig.DeviceId;
@@ -58,21 +60,23 @@ namespace UwpSampleApp
             CurrentStream = entry;
             _m = new StreamMediaInput(CurrentStream);
             _k = new Media(_libVlc, _m);
+            did_set_transfer = false;
+
             _mediaPlayer.Play(_k);
 
             return Task.CompletedTask;
         }
 
-        public void Resume(long position = -1)
+        public async void Resume(long position = -1)
         {
-            // throw new NotImplementedException();
+            transfer_pos = position;
+            _mediaPlayer.Play();
+            //await Task.Delay(50);
             if (position != -1)
             {
                 _mediaPlayer.Time = position;
                 AudioOutputStateChanged?.Invoke(this, SpotifyLib.AudioOutputStateChanged.ManualSeek);
             }
-
-            _mediaPlayer.Play();
         }
 
         public void Pause()
@@ -82,7 +86,20 @@ namespace UwpSampleApp
         }
 
         public event EventHandler<AudioOutputStateChanged> AudioOutputStateChanged;
-        public int Position => (int) Math.Abs(_mediaPlayer.Time);
+
+        public int Position
+        {
+            get
+            {
+                if (did_set_transfer)
+                {
+                    did_set_transfer = true;
+                    return (int)transfer_pos;
+                }
+                return (int) Math.Abs(_mediaPlayer.Time);
+            }
+        }
+
         //TODO: Built a local queue somehow...
         public bool CanSkipNext => false;
         public bool CanSkipPrev => false;

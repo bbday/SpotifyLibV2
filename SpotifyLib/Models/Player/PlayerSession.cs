@@ -73,7 +73,7 @@ namespace SpotifyLib.Models.Player
                                    _player.GetCachedStream(playable)
                                ?? await GetCdnStream(playable, _connState.ConState, ct);
             FinishedLoading?.Invoke(this, cachedStream);
-            PlayerQueueHelper.Add(cachedStream, _player, _queue);
+            await PlayerQueueHelper.Add(cachedStream, _player, _queue);
         }
 
         private static async Task<ChunkedStream> GetCdnStream(SpotifyId id,
