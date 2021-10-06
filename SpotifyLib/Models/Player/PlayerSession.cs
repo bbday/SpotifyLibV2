@@ -17,7 +17,7 @@ namespace SpotifyLib.Models.Player
     {
 
     }
-    public class PlayerSession
+    public class PlayerSession : IDisposable
     {
         private readonly IAudioOutput _player;
         private readonly string _sessionId;
@@ -166,6 +166,13 @@ namespace SpotifyLib.Models.Player
             if (track.File.Count > 0) return track;
 
             return track.Alternative.FirstOrDefault(z => z.File.Count > 0);
+        }
+
+
+        public void Dispose()
+        {
+            _queue.Head?.Dispose();
+            _queue.Next?.Dispose();
         }
     }
 }

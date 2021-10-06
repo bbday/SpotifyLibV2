@@ -29,7 +29,12 @@ SpotifyLibrary.Protobufs/bin
 SpotifyLibrary.Protobufs/obj
 SpotifyLibrary.Connect/bin
 SpotifyLibrary.Connect/obj
-
+samples/UwpSampleApp/bin
+samples/UwpSampleApp/obj
+SpotifyLib/bin
+SpotifyLib/obj
+SpotifyLib/.vs
+.vs
 # Build results
 [Dd]ebug/
 [Dd]ebugPublic/

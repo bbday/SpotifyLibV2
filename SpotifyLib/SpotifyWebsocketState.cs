@@ -9,12 +9,17 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Reactive.Linq;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using Connectstate;
+using Flurl;
+using Flurl.Http;
 using Google.Protobuf;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Nito.AsyncEx;
 using Org.BouncyCastle.Asn1.Ocsp;
 using Spotify.Player.Proto;
 using Spotify.Player.Proto.Transfer;
@@ -40,7 +45,7 @@ namespace SpotifyLib
     public interface IAudioOutput : ISpotifyDevice
     {
         Task IncomingStream(ChunkedStream entry);
-        void Resume(long position);
+        void Resume(long position = -1);
         void Pause();
         event EventHandler<AudioOutputStateChanged> AudioOutputStateChanged;
         int Position { get; }
@@ -110,72 +115,19 @@ namespace SpotifyLib
 
 
             WaitForConnectionId = new ManualResetEvent(false);
-            PutState = new PutStateRequest
-            {
-                MemberType = MemberType.ConnectState,
-                Device = new Device
-                {
-                    DeviceInfo = new DeviceInfo()
-                    {
-                        CanPlay = true,
-                        Volume = 65536,
-                        Name = ConState.Config.DeviceName,
-                        DeviceId = ConState.Config.DeviceId,
-                        DeviceType = DeviceType.Computer,
-                        DeviceSoftwareVersion = "Spotify-11.1.0",
-                        SpircVersion = "3.2.6",
-                        Capabilities = new Capabilities
-                        {
-                            CanBePlayer = true,
-                            GaiaEqConnectId = true,
-                            SupportsLogout = true,
-                            VolumeSteps = 64,
-                            IsObservable = true,
-                            CommandAcks = true,
-                            SupportsRename = false,
-                            SupportsPlaylistV2 = true,
-                            IsControllable = true,
-                            SupportsCommandRequest = true,
-                            SupportsTransferCommand = true,
-                            SupportsGzipPushes = true,
-                            NeedsFullPlayerState = false,
-                            SupportedTypes =
-                            {
-                                "audio/episode",
-                                "audio/track"
-                            }
-                        }
-                    },
-                    PlayerState = new PlayerState
-                    {
-                        PlaybackSpeed = 1.0,
-                        SessionId = string.Empty,
-                        PlaybackId = string.Empty,
-                        Suppressions = new Suppressions(),
-                        ContextRestrictions = new Restrictions(),
-                        Options = new ContextPlayerOptions
-                        {
-                            RepeatingTrack = false,
-                            ShufflingContext = false,
-                            RepeatingContext = false
-                        },
-                        Position = 0,
-                        PositionAsOfTimestamp = 0,
-                        IsPlaying = false,
-                        IsSystemInitiated = true
-                    }
-                }
-            };
+
             _connectStateHolder = new SpotifyConnectState(this);
         }
 
-        internal PutStateRequest PutState { get; }
         internal HttpClient PutHttpClient { get; private set; }
         internal ManualResetEvent WaitForConnectionId { get; }
         public string ConnectionId { get; private set; }
         public event EventHandler<Cluster> ClusterUpdated;
         public event EventHandler<(ISpotifyDevice? Old, ISpotifyDevice? New)> ActiveDeviceChanged;
+        public event 
+            EventHandler<List<RemoteSpotifyDevice>> DevicesAvailableChanged;
 
+        private List<RemoteSpotifyDevice> _avaSpotifyDevices { get; set; }
         public Cluster LatestCluster
         {
             get => _latestCluster;
@@ -191,6 +143,33 @@ namespace SpotifyLib
                     ActiveDevice = new RemoteSpotifyDevice(value.Device[value.ActiveDeviceId], ConState.Config);
                 }
 
+                var newDevices = value
+                    .Device
+                    .Select(a => new RemoteSpotifyDevice(a.Value, ConState.Config))
+                    .ToList();
+                if (value.Device
+                    .All(a =>
+                        newDevices.Any(j => j.DeviceId == a.Key)))
+                {
+                    if(newDevices
+                        .All(a =>
+                            value.Device.Any(j => j.Key == a.DeviceId)))
+                    {
+                        //nothing changed..
+                    }
+                    else
+                    {
+                        DevicesAvailableChanged?.Invoke(this, newDevices);
+                    }
+                }
+                else
+                {
+                    //changed.
+                    DevicesAvailableChanged?.Invoke(this, newDevices);
+
+                }
+
+                _avaSpotifyDevices = newDevices;
                 ClusterUpdated?.Invoke(this, value);
             }
         }
@@ -228,7 +207,7 @@ namespace SpotifyLib
                 PutHttpClient.DefaultRequestHeaders.Add("X-Spotify-Connection-Id", ConnectionId);
                 //send device hello.
                 var initial = await 
-                    UpdateState(PutStateReason.NewDevice);
+                    _connectStateHolder.UpdateState(PutStateReason.NewDevice, _connectStateHolder.State);
                 LatestCluster = Cluster.Parser.ParseFrom(initial);
                 WaitForConnectionId.Set();
             }
@@ -255,41 +234,11 @@ namespace SpotifyLib
                 }
             }
         }
-        internal async Task<byte[]> UpdateState(
-            PutStateReason reason, int playertime = -1)
-        {
-            if (playertime == -1) PutState.HasBeenPlayingForMs = 0L;
-            else PutState.HasBeenPlayingForMs = (ulong)playertime;
-
-            PutState.PutStateReason = reason;
-            PutState.ClientSideTimestamp = (ulong)TimeHelper.CurrentTimeMillisSystem;
-
-            var asBytes = PutState.ToByteArray();
-            using var ms = new MemoryStream();
-            using (var gzip = new GZipStream(ms, CompressionMode.Compress, true))
-            {
-                gzip.Write(asBytes, 0, asBytes.Length);
-            }
-
-            ms.Position = 0;
-            var content = new StreamContent(ms);
-            content.Headers.ContentType = new MediaTypeHeaderValue("application/protobuf");
-            content.Headers.ContentEncoding.Add("gzip");
-
-            var res = await PutHttpClient
-                .PutAsync($"/connect-state/v1/devices/{ConState.Config.DeviceId}", content, _ct);
-            if (res.IsSuccessStatusCode)
-            {
-                return await res.Content.ReadAsByteArrayAsync();
-            }
-
-            throw new HttpRequestException(res.StatusCode.ToString());
-        }
 
         internal async Task<RequestResult> OnRequest(SpotifyWebsocketRequest req)
         {
-            PutState.LastCommandMessageId = (uint) req.Pid;
-            PutState.LastCommandSentByDeviceId = req.Sender;
+            _connectStateHolder.PutState.LastCommandMessageId = (uint) req.Pid;
+            _connectStateHolder.PutState.LastCommandSentByDeviceId = req.Sender;
             var endpoint = req.Command["endpoint"].ToString()
                 .StringToEndPoint();
             var cmd = new CommandBody(req.Command);
@@ -348,18 +297,15 @@ namespace SpotifyLib
         {
             if (active)
             {
-                if (!PutState.IsActive)
-                {
-                    long now = TimeHelper.CurrentTimeMillisSystem;
-                    PutState.IsActive = true;
-                    PutState.StartedPlayingAt = (ulong)now;
-                    Debug.WriteLine("Device is now active. ts: {0}", now);
-                }
+                long now = TimeHelper.CurrentTimeMillisSystem;
+                _connectStateHolder.PutState.IsActive = true;
+                _connectStateHolder.PutState.StartedPlayingAt = (ulong) now;
+                Debug.WriteLine("Device is now active. ts: {0}", now);
             }
             else
             {
-                PutState.IsActive = false;
-                PutState.StartedPlayingAt = 0L;
+                _connectStateHolder.PutState.IsActive = false;
+                _connectStateHolder.PutState.StartedPlayingAt = 0L;
             }
         }
 
@@ -515,6 +461,30 @@ namespace SpotifyLib
             }
             PutHttpClient?.Dispose();
             WaitForConnectionId?.Dispose();
+        }
+
+        public async Task<AckResponse> SendCommandToDevice(string activeDeviceDeviceId, object p1,
+            CancellationToken ct = default)
+        {
+            var spclient = await ApResolver.GetClosestSpClient();
+            var resp = 
+                await spclient
+                .AppendPathSegments("connect-state", "v1", "player", "command", "from", AudioOutput.DeviceId, "to",
+                    activeDeviceDeviceId)
+                .WithOAuthBearerToken((await ConState.GetToken(ct)).AccessToken)
+                .PostJsonAsync(p1, cancellationToken: ct);
+            return await resp.GetJsonAsync<AckResponse>();
+        }
+
+        public readonly struct AckResponse
+        {
+            [Newtonsoft.Json.JsonConstructor]
+            public AckResponse(string ackId)
+            {
+                AckId = ackId;
+            }
+            [JsonPropertyName("ack_id")]
+            public string AckId { get; }
         }
     }
 }

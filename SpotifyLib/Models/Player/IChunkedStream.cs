@@ -244,7 +244,7 @@ namespace SpotifyLib.Models.Player
         private int pos;
     }
 
-    public readonly struct TrackOrEpisode
+    public readonly struct TrackOrEpisode : IEquatable<TrackOrEpisode>
     {
         public SpotifyId Id { get; }
         public Track Track { get; }
@@ -253,6 +253,21 @@ namespace SpotifyLib.Models.Player
         {
             Id = id;
             Track = track;
+        }
+
+        public bool Equals(TrackOrEpisode other)
+        {
+            return Id.Equals(other.Id);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return obj is TrackOrEpisode other && Equals(other);
+        }
+
+        public override int GetHashCode()
+        {
+            return Id.GetHashCode();
         }
     }
 }

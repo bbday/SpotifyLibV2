@@ -1,11 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using System.IO.Compression;
 using System.Linq;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Connectstate;
+using Google.Protobuf;
 using Newtonsoft.Json.Linq;
+using Nito.AsyncEx;
 using Spotify.Player.Proto;
 using SpotifyLib.Enums;
 using SpotifyLib.Helpers;
@@ -15,55 +22,182 @@ using SpotifyLib.Models.Player;
 using SpotifyLib.Models.Response;
 using SpotifyLib.Models.Transitions;
 using ContextPlayerOptions = Connectstate.ContextPlayerOptions;
+using Restrictions = Connectstate.Restrictions;
 
 namespace SpotifyLib
 {
     public class SpotifyConnectState
     {
         internal readonly SpotifyWebsocketState WsState;
+        internal PutStateRequest PutState { get; }
+
         public SpotifyConnectState(SpotifyWebsocketState wsState)
         {
             WsState = wsState;
-            WsState.AudioOutput.AudioOutputStateChanged += (sender, changed) =>
+            WsState.AudioOutput.AudioOutputStateChanged += AudioOutputOnAudioOutputStateChanged;
+            PutState = new PutStateRequest
             {
-                switch (changed)
+                MemberType = MemberType.ConnectState,
+                Device = new Device
                 {
-                    case AudioOutputStateChanged.Buffering:
-                        if (!State.IsPaused)
+                    DeviceInfo = new DeviceInfo()
+                    {
+                        CanPlay = true,
+                        Volume = 65536,
+                        Name = WsState.ConState.Config.DeviceName,
+                        DeviceId = WsState.ConState.Config.DeviceId,
+                        DeviceType = DeviceType.Computer,
+                        DeviceSoftwareVersion = "Spotify-11.1.0",
+                        SpircVersion = "3.2.6",
+                        Capabilities = new Capabilities
                         {
-                            State.IsBuffering = true;
-                            _ = wsState.UpdateState(PutStateReason.PlayerStateChanged, wsState.AudioOutput
-                                .Position);
+                            CanBePlayer = true,
+                            GaiaEqConnectId = true,
+                            SupportsLogout = true,
+                            VolumeSteps = 64,
+                            IsObservable = true,
+                            CommandAcks = true,
+                            SupportsRename = false,
+                            SupportsPlaylistV2 = true,
+                            IsControllable = true,
+                            SupportsCommandRequest = true,
+                            SupportsTransferCommand = true,
+                            SupportsGzipPushes = true,
+                            NeedsFullPlayerState = false,
+                            SupportedTypes =
+                            {
+                                "audio/episode",
+                                "audio/track"
+                            }
                         }
-                        break;
-                    case AudioOutputStateChanged.Playing:
-                        break;
-                    case AudioOutputStateChanged.Paused:
-                        break;
-                    case AudioOutputStateChanged.Finished:
-                        break;
+                    }
                 }
             };
-            State = InitState(new PlayerState());
-        }
-        private static PlayerState InitState(PlayerState plstate)
-        {
-            plstate.PlaybackSpeed = 1.0;
-            plstate.SessionId = string.Empty;
-            plstate.PlaybackId = string.Empty;
-            plstate.Suppressions = new Suppressions();
-            plstate.ContextRestrictions = new Connectstate.Restrictions();
-            plstate.Options = new ContextPlayerOptions
+            State = new PlayerState
             {
-                RepeatingTrack = false,
-                ShufflingContext = false,
-                RepeatingContext = false
+                PlaybackSpeed = 1.0,
+                SessionId = string.Empty,
+                PlaybackId = string.Empty,
+                Suppressions = new Suppressions(),
+                ContextRestrictions = new Restrictions(),
+                Options = new ContextPlayerOptions
+                {
+                    RepeatingTrack = false,
+                    ShufflingContext = false,
+                    RepeatingContext = false
+                },
+                Position = 0,
+                PositionAsOfTimestamp = 0,
+                IsPlaying = false,
+                IsSystemInitiated = true
             };
-            plstate.Position = 0;
-            plstate.PositionAsOfTimestamp = 0;
-            plstate.IsPlaying = false;
-            return plstate;
         }
+
+
+
+        AsyncLock m = new AsyncLock();
+        internal async Task<byte[]> UpdateState(
+            PutStateReason reason, PlayerState st,
+            int playertime = -1,
+            bool @break = false)
+        {
+            using (await m.LockAsync())
+            {
+                var timestamp = (ulong)TimeHelper.CurrentTimeMillisSystem;
+                if (playertime == -1)
+                    PutState.HasBeenPlayingForMs = 0L;
+                else
+                    PutState.HasBeenPlayingForMs = (ulong)Math.Min((ulong)playertime,
+                        timestamp - PutState.StartedPlayingAt);
+
+                PutState.PutStateReason = reason;
+                PutState.ClientSideTimestamp = timestamp;
+                PutState.Device.PlayerState = st;
+                var asBytes = PutState.ToByteArray();
+                using var ms = new MemoryStream();
+                using (var gzip = new GZipStream(ms, CompressionMode.Compress, true))
+                {
+                    gzip.Write(asBytes, 0, asBytes.Length);
+                }
+
+                ms.Position = 0;
+                var content = new StreamContent(ms);
+                content.Headers.ContentType = new MediaTypeHeaderValue("application/protobuf");
+                content.Headers.ContentEncoding.Add("gzip");
+
+                var res = await WsState.PutHttpClient
+                    .PutAsync($"/connect-state/v1/devices/{WsState.ConState.Config.DeviceId}", content, CancellationToken.None);
+                if (res.IsSuccessStatusCode)
+                {
+                    //if (@break) Debugger.Break();
+                    return await res.Content.ReadAsByteArrayAsync();
+                }
+
+                throw new HttpRequestException(res.StatusCode.ToString());
+            }
+        }
+
+        private async void AudioOutputOnAudioOutputStateChanged(object sender, AudioOutputStateChanged e)
+        {
+            await Task.Delay(100);
+            switch (e)
+            {
+                case AudioOutputStateChanged.Buffering:
+                    {
+                        if (!State.IsPaused)
+                        {
+                            SetState(true, State.IsPaused, true);
+                            var updated = await UpdateState(
+                                PutStateReason.PlayerStateChanged,
+                                State,
+                                WsState
+                                .AudioOutput
+                                .Position);
+                        }
+                    }
+                    break;
+                case AudioOutputStateChanged.ManualSeek:
+                case AudioOutputStateChanged.Playing:
+                    {
+                        SetState(true, false, false);
+                        var updated = await UpdateState(PutStateReason.PlayerStateChanged,
+                            State,
+                            WsState.AudioOutput.Position, true);
+                    }
+                    break;
+                case AudioOutputStateChanged.Paused:
+                    {
+                        //SetState(true, true, false);
+                        //var updated = await wsState.UpdateState(PutStateReason.PlayerStateChanged, wsState.AudioOutput
+                        //  .Position);
+                    }
+                    break;
+                case AudioOutputStateChanged.Finished:
+                    break;
+            }
+        }
+
+        public void SetState(bool playing, bool paused, bool buffering)
+        {
+            if (paused && !playing) throw new IllegalStateException();
+            else if (buffering && !playing) throw new IllegalStateException();
+
+            var wasPaused = IsPaused();
+            State.IsPlaying = playing;
+            State.IsPaused = paused;
+            State.IsBuffering = buffering;
+
+            if (wasPaused && !paused) // Assume the position was set immediately before pausing
+                SetPosition(State.PositionAsOfTimestamp);
+        }
+        public void SetPosition(long pos)
+        {
+            State.Timestamp = TimeHelper.CurrentTimeMillisSystem;
+            State.PositionAsOfTimestamp = pos;
+            State.Position = 0L;
+        }
+        public bool IsPaused() => State.IsPlaying && State.IsPaused;
+
         internal AbsSpotifyContext Context;
         internal PlayerState State { get; }
         internal string SetContext(Context ctx)
@@ -99,7 +233,10 @@ namespace SpotifyLib
                 withSkip);
 
             if (Session != null)
+            {
                 Session.FinishedLoading -= SessionOnFinishedLoading;
+                Session.Dispose();
+            }
 
             Session = new PlayerSession(WsState,
                 sessionId);
@@ -109,11 +246,11 @@ namespace SpotifyLib
             await LoadTrack(play, transitionInfo);
         }
 
-        private void SessionOnFinishedLoading(object sender, ChunkedStream e)
+        private async void SessionOnFinishedLoading(object sender, ChunkedStream e)
         {
             EnrichWithMetadata(e);
-            State.IsBuffering = false;
-            _ = WsState.UpdateState(PutStateReason.PlayerStateChanged, WsState.AudioOutput
+            SetState(true, State.IsPaused, false);
+            await UpdateState(PutStateReason.PlayerStateChanged, State, WsState.AudioOutput
                 .Position);
         }
 
@@ -124,12 +261,18 @@ namespace SpotifyLib
                 (int)State.Position,
                 transitionInfo.StartedReason);
             State.PlaybackId = playbackId.PlaybackId;
-            if (willPlay) 
-                WsState.AudioOutput.Resume(State.Position);
+            if (willPlay)
+                WsState.AudioOutput.Resume(GetPosition());
             else
                 WsState.AudioOutput.Pause();
-        }
 
+
+        }
+        public long GetPosition()
+        {
+            int diff = (int)(TimeHelper.CurrentTimeMillisSystem - State.Timestamp);
+            return (int)(State.PositionAsOfTimestamp + diff);
+        }
         public PlayerSession Session { get; set; }
         public TracksKeeper TracksKeeper { get; set; }
         public PagesLoader Pages { get; set; }
@@ -139,7 +282,7 @@ namespace SpotifyLib
             get
             {
                 var id = GetCurrentPlayable;
-                if (id.Uri == null) 
+                if (id.Uri == null)
                     throw new IllegalStateException();
                 return id;
             }

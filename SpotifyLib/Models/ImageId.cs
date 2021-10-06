@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Connectstate;
 using Google.Protobuf;
@@ -9,9 +10,10 @@ namespace SpotifyLib.Models
 {
     public class ImageId 
     {
-        public ImageId(string uri)
+        public ImageId(string id)
         {
-            Uri = uri;
+            Uri = $"spotify:image:{id.ToLowerInvariant()}";
+            Id = id.ToLowerInvariant();
         }
         public static void PutAsMetadata(ProvidedTrack builder,
             ImageGroup group)
@@ -40,9 +42,16 @@ namespace SpotifyLib.Models
                 builder.Metadata[key] = new ImageId(image.FileId).Uri;
             }
         }
-        public ImageId(ByteString hexByteString) : this($"spotify:image:{hexByteString.ToByteArray().BytesToHex()}")
+        public static IEnumerable<(Image.Types.Size Size, string Uri)> GetImages(
+            ImageGroup group)
+        {
+            return @group.Image.Select(image => (image.Size, new ImageId(image.FileId).Id));
+        }
+        public ImageId(ByteString hexByteString) : 
+            this(hexByteString.ToByteArray().BytesToHex().ToLowerInvariant())
         { }
 
+        public string Id { get; }
         public string Uri { get; }
     }
 }

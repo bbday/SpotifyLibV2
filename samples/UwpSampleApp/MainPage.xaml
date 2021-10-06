@@ -1,0 +1,89 @@
+﻿<Page
+    x:Class="UwpSampleApp.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:UwpSampleApp"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+      xmlns:muxc="using:Microsoft.UI.Xaml.Controls"
+      xmlns:models="using:SpotifyLib.Models"
+      mc:Ignorable="d"
+      muxc:BackdropMaterial.ApplyToRootOrPageBackground="True"
+      Loaded="MainPage_OnLoaded">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="100" />
+        </Grid.RowDefinitions>
+        <StackPanel Margin="100"
+                    Spacing="1"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
+            <Image Height="400"
+                   Width="400"
+                   Source="{x:Bind Image, Mode=OneWay}"
+                   Stretch="UniformToFill" />
+            <TextBlock HorizontalAlignment="Center"
+                       FontSize="30"
+                       Margin="0,12,0,0"
+                       FontWeight="SemiBold"
+                       Text="{x:Bind Title, Mode=OneWay}" />
+            <TextBlock HorizontalAlignment="Center"
+                       FontSize="20"
+                       Opacity=".8"
+                       FontWeight="Normal"
+                       Text="{x:Bind Artist, Mode=OneWay}" />
+
+
+            <TextBlock Text="{x:Bind PlayingOnDeviceString, Mode=OneWay}"
+                       Margin="0,24,0,0"
+                       HorizontalAlignment="Center" />
+            <ComboBox  ItemsSource="{x:Bind AvailableDevices, Mode=OneWay}"
+                       HorizontalAlignment="Center"
+                       DisplayMemberPath="Name"
+                       PlaceholderText="Select a device." />
+        </StackPanel>
+
+        <Border Grid.Row="1"
+                Background="{ThemeResource LayerFillColorDefaultBrush}"
+                CornerRadius="8"
+                BorderThickness="1"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+            <Grid Margin="50,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition />
+                    <RowDefinition />
+                </Grid.RowDefinitions>
+
+                <StackPanel Margin="0,5"
+                            Spacing="14"
+                            Orientation="Horizontal"
+                            HorizontalAlignment="Center">
+                    <Button>
+                        <FontIcon FontFamily="{ThemeResource SymbolThemeFontFamily}"
+                                  Glyph="&#xE892;" />
+                    </Button>
+                    <ToggleButton x:Name="PauseButton"
+                                  Tapped="PauseButton_OnTapped"
+                                  IsChecked="{x:Bind IsPaused, Mode=OneWay}"
+                                  Content="Paused" />
+                    <Button>
+                        <FontIcon FontFamily="{ThemeResource SymbolThemeFontFamily}"
+                                  Glyph="&#xE893;" />
+                    </Button>
+                </StackPanel>
+                <Slider  Maximum="{x:Bind DurationMs, Mode=OneWay}"
+                         Value="{x:Bind PositionMs, Mode=TwoWay}"
+                         ManipulationMode="All"
+                         ManipulationStarting="TimelineSlider_OnManipulationStarting"
+                         ManipulationCompleted="TimelineSlider_OnManipulationCompleted"
+                         PointerCaptureLost="TimelineSlider_OnPointerCaptureLost"
+                         x:Name="timelineSlider"
+                         Grid.Row="1"
+                         VerticalAlignment="Center" />
+            </Grid>
+        </Border>
+    </Grid>
+</Page>
+
