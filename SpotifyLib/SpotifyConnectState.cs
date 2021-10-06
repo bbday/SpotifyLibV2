@@ -157,6 +157,13 @@ namespace SpotifyLib
                     }
                     break;
                 case AudioOutputStateChanged.ManualSeek:
+                {
+                    SetPosition(WsState.AudioOutput.Position);
+                    var updated = await UpdateState(PutStateReason.PlayerStateChanged,
+                        State,
+                        WsState.AudioOutput.Position, true);
+                }
+                    break;
                 case AudioOutputStateChanged.Playing:
                     {
                         SetState(true, false, false);
@@ -167,9 +174,9 @@ namespace SpotifyLib
                     break;
                 case AudioOutputStateChanged.Paused:
                     {
-                        //SetState(true, true, false);
-                        //var updated = await wsState.UpdateState(PutStateReason.PlayerStateChanged, wsState.AudioOutput
-                        //  .Position);
+                        SetState(true, true, false);
+                        var updated = await UpdateState(PutStateReason.PlayerStateChanged, State, WsState.AudioOutput
+                          .Position);
                     }
                     break;
                 case AudioOutputStateChanged.Finished:

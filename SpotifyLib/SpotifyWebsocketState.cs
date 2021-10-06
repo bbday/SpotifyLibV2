@@ -187,10 +187,10 @@ namespace SpotifyLib
             }
         }
 
-        public bool CanSkipNext => !LatestCluster.PlayerState.Restrictions.DisallowSkippingNextReasons
-            .Any();
-        public bool CanSkipPrevious => !LatestCluster.PlayerState.Restrictions.DisallowSkippingPrevReasons
-            .Any();
+        public bool CanSkipNext => !LatestCluster.PlayerState.Restrictions?.DisallowSkippingNextReasons
+            .Any() ?? false;
+        public bool CanSkipPrevious => !LatestCluster.PlayerState.Restrictions?.DisallowSkippingPrevReasons
+            .Any() ?? false;
         private async void OnMessageReceived((Dictionary<string, string>, string Text) obj)
         {
             if (obj.Item1 == null) return;
@@ -480,6 +480,26 @@ namespace SpotifyLib
             return await resp.GetJsonAsync<AckResponse>();
         }
 
+        public async Task<AckResponse> SendTransferCommand(string activeDeviceDeviceId,
+            CancellationToken ct = default)
+        {
+            var spclient = await ApResolver.GetClosestSpClient();
+            var resp =
+                await spclient
+                    .AppendPathSegments("connect-state", "v1", "connect", "transfer", "from", AudioOutput.DeviceId,
+                        "to",
+                        activeDeviceDeviceId)
+                    .WithOAuthBearerToken((await ConState.GetToken(ct)).AccessToken)
+                    .PostJsonAsync(new
+                    {
+                        transfer_options = new
+                        {
+                            restore_paused = "restore"
+                        }
+                    }, cancellationToken: ct);
+            return await resp.GetJsonAsync<AckResponse>();
+        }
+
         public readonly struct AckResponse
         {
             [Newtonsoft.Json.JsonConstructor]
@@ -490,5 +510,6 @@ namespace SpotifyLib
             [JsonPropertyName("ack_id")]
             public string AckId { get; }
         }
+
     }
 }

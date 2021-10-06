@@ -425,5 +425,15 @@ namespace UwpSampleApp
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
+
+        private void Selector_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            var sel = (sender as ComboBox).SelectedItem;
+            if (sel is RemoteSpotifyDevice dev)
+            {
+                //switch command..
+                _wsState.SendTransferCommand(dev.DeviceId);
+            }
+        }
     }
 }

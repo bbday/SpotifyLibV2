@@ -26,6 +26,7 @@ namespace UwpSampleApp
             {
                 AudioOutputStateChanged?.Invoke(this, SpotifyLib.AudioOutputStateChanged.Paused);
             };
+
         }
 
         private readonly LibVLC _libVlc;
@@ -86,7 +87,12 @@ namespace UwpSampleApp
         public bool CanSkipNext => false;
         public bool CanSkipPrev => false;
 
-        public void SetPos(double d) => _mediaPlayer.Time = (long)d; 
+        public void SetPos(double d)
+        {
+            _mediaPlayer.Time = (long) d;
+            AudioOutputStateChanged?.Invoke(this, SpotifyLib.AudioOutputStateChanged.ManualSeek);
+        }
+
         public async Task<ChunkedStream> GetCachedStream(SpotifyId playable)
         {
             return null;

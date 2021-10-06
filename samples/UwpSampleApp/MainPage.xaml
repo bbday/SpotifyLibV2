@@ -46,6 +46,7 @@
                        HorizontalAlignment="Center" />
             <ComboBox  ItemsSource="{x:Bind AvailableDevices, Mode=OneWay}"
                        HorizontalAlignment="Center"
+                       SelectionChanged="Selector_OnSelectionChanged"
                        DisplayMemberPath="Name"
                        PlaceholderText="Select a device." />
         </StackPanel>
