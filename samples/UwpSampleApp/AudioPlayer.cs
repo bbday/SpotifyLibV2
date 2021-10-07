@@ -60,14 +60,14 @@ namespace UwpSampleApp
             CurrentStream = entry;
             _m = new StreamMediaInput(CurrentStream);
             _k = new Media(_libVlc, _m);
-            did_set_transfer = false;
+            did_set_transfer = true;
 
             _mediaPlayer.Play(_k);
 
             return Task.CompletedTask;
         }
 
-        public async void Resume(long position = -1)
+        public void Resume(long position = -1)
         {
             transfer_pos = position;
             _mediaPlayer.Play();
@@ -93,20 +93,20 @@ namespace UwpSampleApp
             {
                 if (did_set_transfer)
                 {
-                    did_set_transfer = true;
+                    did_set_transfer = false;
                     return (int)transfer_pos;
                 }
-                return (int) Math.Abs(_mediaPlayer.Time);
+                return (int)_mediaPlayer.Time;
             }
         }
 
         //TODO: Built a local queue somehow...
         public bool CanSkipNext => false;
         public bool CanSkipPrev => false;
-
+        public void Seek(double d) => _mediaPlayer.Time = (long)d;
         public void SetPos(double d)
         {
-            _mediaPlayer.Time = (long) d;
+            Seek(d);
             AudioOutputStateChanged?.Invoke(this, SpotifyLib.AudioOutputStateChanged.ManualSeek);
         }
 

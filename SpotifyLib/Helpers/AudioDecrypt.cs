@@ -26,6 +26,7 @@ namespace SpotifyLib.Helpers
 
         public AudioDecrypt(byte[] key)
         {
+
             _spec = ParameterUtilities.CreateKeyParameter("AES", key);
             _cipher = CipherUtilities.GetCipher("AES/CTR/NoPadding");
         }

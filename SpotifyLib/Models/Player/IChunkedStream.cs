@@ -84,10 +84,10 @@ namespace SpotifyLib.Models.Player
         }
 
 
-        public int TotalSize { get; }
-        public int Chunks { get; }
-        public bool[] Available { get; }
-        public byte[][] Buffer { get; }
+        public int TotalSize { get; private set; }
+        public int Chunks { get; private set; }
+        public bool[] Available { get; private set; }
+        public byte[][] Buffer { get; private set; }
         public int GetChunk(int chunkIndex)
         {
             if (Available[chunkIndex]) return 0;
@@ -107,12 +107,15 @@ namespace SpotifyLib.Models.Player
         }
         public void Dispose()
         {
-            throw new NotImplementedException();
+            url = null;
+            Buffer = null;
+            Available = null;
+
         }
     }
-    public class ChunkedStream : Stream
+    public class ChunkedStream : Stream, IDisposable
     {
-        private readonly IFetcher _fetcher;
+        private IFetcher _fetcher;
         public ChunkedStream(string path,
             TrackOrEpisode metadata)
         {
@@ -242,6 +245,13 @@ namespace SpotifyLib.Models.Player
 
         public string PlaybackId = SpotifyConnectState.GeneratePlaybackId();
         private int pos;
+
+        protected override void Dispose(bool disposing)
+        {
+            base.Dispose(disposing);
+            _fetcher.Dispose();
+            _fetcher = null;
+        }
     }
 
     public readonly struct TrackOrEpisode : IEquatable<TrackOrEpisode>

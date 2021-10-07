@@ -47,6 +47,7 @@ namespace SpotifyLib
         Task IncomingStream(ChunkedStream entry);
         void Resume(long position = -1);
         void Pause();
+        void Seek(double d);
         event EventHandler<AudioOutputStateChanged> AudioOutputStateChanged;
         int Position { get; }
         /// <summary>
@@ -260,10 +261,30 @@ namespace SpotifyLib
                         Debug.WriteLine(x.ToString());
                         return RequestResult.UpstreamError;
                     }
+                case Endpoint.Resume:
+                    _connectStateHolder.SetState(true, false, false);
+                    AudioOutput.Resume();
+                    _connectStateHolder.UpdateState(PutStateReason.PlayerStateChanged, _connectStateHolder.State,
+                        AudioOutput.Position);
+                    return RequestResult.Success;
+                    break;
+                case Endpoint.Pause:
+                    _connectStateHolder.SetState(true, true, false);
+                    AudioOutput.Pause();
+                    _connectStateHolder.UpdateState(PutStateReason.PlayerStateChanged, _connectStateHolder.State,
+                        AudioOutput.Position);
+                    return RequestResult.Success;
+                    break;
+                case Endpoint.SeekTo:
+                    AudioOutput.Seek(cmd.Obj.Value<int>("value"));
+                    _connectStateHolder.UpdateState(PutStateReason.PlayerStateChanged, _connectStateHolder.State,
+                        AudioOutput.Position);
+                    return RequestResult.Success;
                     break;
                 default:
                     return RequestResult.DeviceDoesNotSupportCommand;
             }
+
         }
 
         private async Task HandleTransferState(TransferState cmd)

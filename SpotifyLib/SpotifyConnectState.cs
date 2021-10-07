@@ -107,8 +107,7 @@ namespace SpotifyLib
                 if (playertime == -1)
                     PutState.HasBeenPlayingForMs = 0L;
                 else
-                    PutState.HasBeenPlayingForMs = (ulong)Math.Min((ulong)playertime,
-                        timestamp - PutState.StartedPlayingAt);
+                    PutState.HasBeenPlayingForMs = (ulong) playertime;
 
                 PutState.PutStateReason = reason;
                 PutState.ClientSideTimestamp = timestamp;

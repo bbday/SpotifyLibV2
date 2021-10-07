@@ -159,7 +159,7 @@ namespace SpotifyLib.Models.Player
                 throw new FeederException();
             }
 
-            return (track, file);
+            return (original, file);
         }
         private static Track PickAlternativeIfNecessary(Track track)
         {
