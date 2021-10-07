@@ -29,12 +29,12 @@ namespace SpotifyLib
     public class SpotifyConnectState
     {
         internal readonly SpotifyWebsocketState WsState;
-        internal PutStateRequest PutState { get; }
+        internal PutStateRequest PutState { get; private set; }
 
         public SpotifyConnectState(SpotifyWebsocketState wsState)
         {
             WsState = wsState;
-            WsState.AudioOutput.AudioOutputStateChanged += AudioOutputOnAudioOutputStateChanged;
+            WsState.AudioOutput.AudioOutputStateChanged += AudioOutputOnAudioOutputStateChanged; 
             PutState = new PutStateRequest
             {
                 MemberType = MemberType.ConnectState,
@@ -73,7 +73,32 @@ namespace SpotifyLib
                     }
                 }
             };
-            State = new PlayerState
+            State = InitState();
+        }
+
+
+        private static PlayerState InitState(PlayerState playerState = null)
+        {
+            if (playerState != null)
+            {
+                playerState.PlaybackSpeed = 1.0;
+                playerState.SessionId = string.Empty;
+                playerState.PlaybackId = string.Empty;
+                playerState.Suppressions = new Suppressions();
+                playerState.ContextRestrictions = new Restrictions();
+                playerState.Options = new ContextPlayerOptions
+                {
+                    RepeatingTrack = false,
+                    ShufflingContext = false,
+                    RepeatingContext = false
+                };
+                playerState.Position = 0;
+                playerState.PositionAsOfTimestamp = 0;
+                playerState.IsPlaying = false;
+                playerState.IsSystemInitiated = true;
+                return playerState;
+            }
+            return new PlayerState
             {
                 PlaybackSpeed = 1.0,
                 SessionId = string.Empty,
@@ -92,9 +117,6 @@ namespace SpotifyLib
                 IsSystemInitiated = true
             };
         }
-
-
-
         AsyncLock m = new AsyncLock();
         internal async Task<byte[]> UpdateState(
             PutStateReason reason, PlayerState st,
@@ -182,6 +204,24 @@ namespace SpotifyLib
                 case AudioOutputStateChanged.Finished:
                     break;
             }
+        }
+
+        public void NotActive()
+        {
+            PutState.IsActive = false;
+            PutState.PutStateReason = 0;
+            PutState.MessageId = 0;
+            PutState.LastCommandMessageId = 0;
+            PutState.LastCommandSentByDeviceId = "";
+            PutState.StartedPlayingAt = 0L;
+            PutState.HasBeenPlayingForMs = 0L;
+            PutState.ClientSideTimestamp = 0L;
+            InitState(State);
+
+            WsState.SetDeviceIsActive(false);
+            WsState.AudioOutput.Stop();
+            UpdateState(PutStateReason.BecameInactive, State, (int) WsState.AudioOutput.Position);
+            Debug.WriteLine("Notified inactivity!");
         }
 
         public void SetState(bool playing, bool paused, bool buffering)

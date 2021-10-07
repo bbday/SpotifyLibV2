@@ -119,5 +119,14 @@ namespace UwpSampleApp
         {
             return null;
         }
+
+        public void Stop()
+        {
+            CurrentStream?.Dispose();
+            _m?.Dispose();
+            _k?.Dispose();
+
+            _mediaPlayer.Stop();
+        }
     }
 }

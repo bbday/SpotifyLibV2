@@ -58,6 +58,8 @@ namespace SpotifyLib
         /// <param name="playable"></param>
         /// <returns></returns>
         Task<ChunkedStream?> GetCachedStream(SpotifyId playable);
+
+        void Stop();
     }
 
     public class SpotifyWebsocketState : IDisposable
@@ -228,6 +230,13 @@ namespace SpotifyLib
                             var update = ClusterUpdate.Parser.ParseFrom(msg.Payload);
                             LatestCluster = update.Cluster;
                             ClusterUpdated?.Invoke(this, update.Cluster);
+
+                            var now = TimeHelper.CurrentTimeMillisSystem;
+
+                            long ts = update.Cluster.Timestamp - 3000; // Workaround
+                            if (!ConState.Config.DeviceId.Equals(update.Cluster.ActiveDeviceId) && _connectStateHolder.PutState.IsActive
+                                && now > (long) _connectStateHolder.PutState.StartedPlayingAt && ts > (long) _connectStateHolder.PutState.StartedPlayingAt)
+                                _connectStateHolder.NotActive();
                         }
                         break;
                     case SpotifyWebsocketRequest req:
