@@ -249,7 +249,7 @@ namespace SpotifyLib.Models.Player
         protected override void Dispose(bool disposing)
         {
             base.Dispose(disposing);
-            _fetcher.Dispose();
+            _fetcher?.Dispose();
             _fetcher = null;
         }
     }

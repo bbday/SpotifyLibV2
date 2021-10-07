@@ -8,7 +8,9 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Reactive.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
@@ -258,6 +260,9 @@ namespace SpotifyLib
             var cmd = new CommandBody(req.Command);
             switch (endpoint)
             {
+                case Endpoint.Play:
+                    await HandlePlay(cmd.Obj);
+                    return RequestResult.Success;
                 case Endpoint.Transfer:
                     try
                     {
@@ -293,9 +298,35 @@ namespace SpotifyLib
                     return RequestResult.Success;
                     break;
                 default:
+                    Debug.WriteLine($"Unsupported cmd: {endpoint.ToString()}");
                     return RequestResult.DeviceDoesNotSupportCommand;
             }
 
+        }
+
+        private async Task HandlePlay(JObject cmdObj)
+        {
+            Debug.WriteLine("Loading context (play), uri: {0}",
+                PlayCommandHelper.GetContextUri(cmdObj));
+            try
+            {
+                var sessionId = await _connectStateHolder.Load(cmdObj);
+                var paused = PlayCommandHelper.IsInitiallyPaused(cmdObj) ?? false;
+                await
+                    _connectStateHolder.LoadSession(sessionId, !paused, PlayCommandHelper.WillSkipToSomething(cmdObj));
+            }
+            catch (MercuryException m)
+            {
+                Debug.WriteLine(m.ToString());
+            }
+            catch (IOException ex)
+            {
+                Debug.WriteLine("Failed loading context!", ex);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("Cannot play context!", ex);
+            }
         }
 
         private async Task HandleTransferState(TransferState cmd)

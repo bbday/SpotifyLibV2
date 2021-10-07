@@ -34,7 +34,7 @@ namespace SpotifyLib
         public SpotifyConnectState(SpotifyWebsocketState wsState)
         {
             WsState = wsState;
-            WsState.AudioOutput.AudioOutputStateChanged += AudioOutputOnAudioOutputStateChanged; 
+            WsState.AudioOutput.AudioOutputStateChanged += AudioOutputOnAudioOutputStateChanged;
             PutState = new PutStateRequest
             {
                 MemberType = MemberType.ConnectState,
@@ -98,6 +98,7 @@ namespace SpotifyLib
                 playerState.IsSystemInitiated = true;
                 return playerState;
             }
+
             return new PlayerState
             {
                 PlaybackSpeed = 1.0,
@@ -117,7 +118,9 @@ namespace SpotifyLib
                 IsSystemInitiated = true
             };
         }
+
         AsyncLock m = new AsyncLock();
+
         internal async Task<byte[]> UpdateState(
             PutStateReason reason, PlayerState st,
             int playertime = -1,
@@ -125,11 +128,11 @@ namespace SpotifyLib
         {
             using (await m.LockAsync())
             {
-                var timestamp = (ulong)TimeHelper.CurrentTimeMillisSystem;
+                var timestamp = (ulong) TimeHelper.CurrentTimeMillisSystem;
                 if (playertime == -1)
                     PutState.HasBeenPlayingForMs = 0L;
                 else
-                    PutState.HasBeenPlayingForMs = (ulong)Math.Min((ulong)playertime,
+                    PutState.HasBeenPlayingForMs = (ulong) Math.Min((ulong) playertime,
                         timestamp - PutState.StartedPlayingAt);
 
                 PutState.PutStateReason = reason;
@@ -148,7 +151,8 @@ namespace SpotifyLib
                 content.Headers.ContentEncoding.Add("gzip");
 
                 var res = await WsState.PutHttpClient
-                    .PutAsync($"/connect-state/v1/devices/{WsState.ConState.Config.DeviceId}", content, CancellationToken.None);
+                    .PutAsync($"/connect-state/v1/devices/{WsState.ConState.Config.DeviceId}", content,
+                        CancellationToken.None);
                 if (res.IsSuccessStatusCode)
                 {
                     //if (@break) Debugger.Break();
@@ -165,18 +169,18 @@ namespace SpotifyLib
             switch (e)
             {
                 case AudioOutputStateChanged.Buffering:
+                {
+                    if (!State.IsPaused)
                     {
-                        if (!State.IsPaused)
-                        {
-                            SetState(true, State.IsPaused, true);
-                            var updated = await UpdateState(
-                                PutStateReason.PlayerStateChanged,
-                                State,
-                                WsState
+                        SetState(true, State.IsPaused, true);
+                        var updated = await UpdateState(
+                            PutStateReason.PlayerStateChanged,
+                            State,
+                            WsState
                                 .AudioOutput
                                 .Position);
-                        }
                     }
+                }
                     break;
                 case AudioOutputStateChanged.ManualSeek:
                 {
@@ -187,19 +191,19 @@ namespace SpotifyLib
                 }
                     break;
                 case AudioOutputStateChanged.Playing:
-                    {
-                        SetState(true, false, false);
-                        var updated = await UpdateState(PutStateReason.PlayerStateChanged,
-                            State,
-                            WsState.AudioOutput.Position, true);
-                    }
+                {
+                    SetState(true, false, false);
+                    var updated = await UpdateState(PutStateReason.PlayerStateChanged,
+                        State,
+                        WsState.AudioOutput.Position, true);
+                }
                     break;
                 case AudioOutputStateChanged.Paused:
-                    {
-                        SetState(true, true, false);
-                        var updated = await UpdateState(PutStateReason.PlayerStateChanged, State, WsState.AudioOutput
-                          .Position);
-                    }
+                {
+                    SetState(true, true, false);
+                    var updated = await UpdateState(PutStateReason.PlayerStateChanged, State, WsState.AudioOutput
+                        .Position);
+                }
                     break;
                 case AudioOutputStateChanged.Finished:
                     break;
@@ -237,16 +241,19 @@ namespace SpotifyLib
             if (wasPaused && !paused) // Assume the position was set immediately before pausing
                 SetPosition(State.PositionAsOfTimestamp);
         }
+
         public void SetPosition(long pos)
         {
             State.Timestamp = TimeHelper.CurrentTimeMillisSystem;
             State.PositionAsOfTimestamp = pos;
             State.Position = 0L;
         }
+
         public bool IsPaused() => State.IsPlaying && State.IsPaused;
 
         internal AbsSpotifyContext Context;
         internal PlayerState State { get; }
+
         internal string SetContext(Context ctx)
         {
             var uri = ctx.Uri;
@@ -305,7 +312,7 @@ namespace SpotifyLib
         {
             Debug.WriteLine($"Loading track id: {GetCurrentPlayable.Uri}");
             var playbackId = await Session.Load(GetCurrentPlayableOrThrow,
-                (int)State.Position,
+                (int) State.Position,
                 transitionInfo.StartedReason);
             State.PlaybackId = playbackId.PlaybackId;
             if (willPlay)
@@ -315,11 +322,13 @@ namespace SpotifyLib
 
 
         }
+
         public long GetPosition()
         {
-            int diff = (int)(TimeHelper.CurrentTimeMillisSystem - State.Timestamp);
-            return (int)(State.PositionAsOfTimestamp + diff);
+            int diff = (int) (TimeHelper.CurrentTimeMillisSystem - State.Timestamp);
+            return (int) (State.PositionAsOfTimestamp + diff);
         }
+
         public PlayerSession Session { get; set; }
         public TracksKeeper TracksKeeper { get; set; }
         public PagesLoader Pages { get; set; }
@@ -338,8 +347,10 @@ namespace SpotifyLib
         public SpotifyId GetCurrentPlayable => TracksKeeper == null
             ? new SpotifyId()
             : PlayableId.From(State.Track);
+
         public bool IsRepeatingContext => State.Options.RepeatingContext;
         public bool IsShufflingContext => State.Options.ShufflingContext;
+
         private void SetRepeatingContext(bool value)
         {
             if (Context == null) return;
@@ -347,6 +358,7 @@ namespace SpotifyLib
             State.Options.RepeatingContext =
                 value && Context.Restrictions.Can(RestrictionsManager.Action.REPEAT_CONTEXT);
         }
+
         private string RenewSessionId()
         {
             var sessionId = GenerateSessionId();
@@ -364,6 +376,7 @@ namespace SpotifyLib
             //str = str.Replace("=", "");
             //return str;
         }
+
         public static string GeneratePlaybackId()
         {
             var bytes = new byte[16];
@@ -380,6 +393,7 @@ namespace SpotifyLib
                 .Replace('/', '_') // replace URL unsafe characters with safe ones
                 .Replace("=", ""); // no padding
         }
+
         private void EnrichWithMetadata(ChunkedStream metadata)
         {
             if (metadata.TrackOrEpisode.Id.Type == AudioItemType.Track)
@@ -451,6 +465,54 @@ namespace SpotifyLib
                 b.Metadata["available_file_formats"] = k.ToString();
                 State.Track = b;
             }
+        }
+
+        public async Task<string> Load(JObject cmdObj)
+        {
+            State.PlayOrigin = ProtoUtils.JsonToPlayOrigin(PlayCommandHelper.GetPlayOrigin(cmdObj) as JObject);
+            State.Options =
+                ProtoUtils.JsonToPlayerOptions(PlayCommandHelper.GetPlayerOptionsOverride(cmdObj) as JObject,
+                    State.Options);
+            var sessionId = SetContext(ProtoUtils.JsonToContext(PlayCommandHelper.GetContext(cmdObj) as JObject));
+
+            var trackUid = PlayCommandHelper.GetSkipToUid(cmdObj);
+            var trackUri = PlayCommandHelper.GetSkipToUri(cmdObj);
+            var trackIndex = PlayCommandHelper.GetSkipToIndex(cmdObj);
+
+            try
+            {
+                if (trackUri != null && !trackUri.IsEmpty())
+                {
+                    await TracksKeeper.InitializeFrom(list => list.FindIndex(a=> a.Uri == trackUri), null, null);
+                    //tracksKeeper.initializeFrom(tracks->ProtoUtils.indexOfTrackByUri(tracks, trackUri), null, null);
+                }
+                else if (trackUid != null && !trackUid.IsEmpty())
+                {
+                    await TracksKeeper.InitializeFrom(list => list.FindIndex(a => a.Uid == trackUid), null, null);
+                }
+                else if (trackIndex != null)
+                {
+                    await TracksKeeper.InitializeFrom(list => trackIndex < list.Count ? trackIndex.Value : -1
+                        , null, null);
+                }
+                else
+                {
+                    await TracksKeeper.InitializeStart();
+                }
+            }
+            catch (IllegalStateException ex)
+            {
+                Debug.WriteLine("Failed initializing tracks, falling back to start. uri: {0}, uid: {1}, index: {2}",
+                    trackUri, trackUid, trackIndex);
+                await TracksKeeper.InitializeStart();
+            }
+
+            var seekTo = PlayCommandHelper.GetSeekTo(cmdObj);
+            SetPosition(seekTo ?? 0);
+
+            //LoadTransforming();
+            return sessionId;
+
         }
     }
 }
