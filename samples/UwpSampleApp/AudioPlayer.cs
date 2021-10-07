@@ -32,8 +32,8 @@ namespace UwpSampleApp
         }
 
         private readonly LibVLC _libVlc;
-        private readonly MediaPlayer _mediaPlayer;
-
+        internal readonly MediaPlayer _mediaPlayer;
+        internal event EventHandler<double> InternalSeek;
 
         public bool Equals(ISpotifyDevice other)
         {
@@ -103,10 +103,15 @@ namespace UwpSampleApp
         //TODO: Built a local queue somehow...
         public bool CanSkipNext => false;
         public bool CanSkipPrev => false;
-        public void Seek(double d) => _mediaPlayer.Time = (long)d;
+        public void Seek(double d)
+        {
+            _mediaPlayer.Time = (long) d;
+            InternalSeek?.Invoke(this, d);
+        }
+
         public void SetPos(double d)
         {
-            Seek(d);
+            _mediaPlayer.Time = (long)d;
             AudioOutputStateChanged?.Invoke(this, SpotifyLib.AudioOutputStateChanged.ManualSeek);
         }
 

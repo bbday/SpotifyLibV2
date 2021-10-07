@@ -115,7 +115,14 @@ namespace UwpSampleApp
             _config = SpotifyConfig.Default();
 
             audioPlayer = new AudioPlayer(_config);
+            audioPlayer.InternalSeek += AudioPlayerOnInternalSeek; 
             audioPlayer.AudioOutputStateChanged += AudioPlayerOnAudioOutputStateChanged;
+        }
+
+        private void AudioPlayerOnInternalSeek(object sender, double e)
+        {
+            _ = CoreApplication.MainView.CoreWindow.Dispatcher
+                .RunAsync(CoreDispatcherPriority.High, () => { PositionMs = audioPlayer?.Position ?? 0; });
         }
 
         public string Image

@@ -276,7 +276,9 @@ namespace SpotifyLib
                     return RequestResult.Success;
                     break;
                 case Endpoint.SeekTo:
-                    AudioOutput.Seek(cmd.Obj.Value<int>("value"));
+                    var pos = cmd.Obj.Value<int>("value");
+                    AudioOutput.Seek(pos);
+                    _connectStateHolder.SetPosition(pos);
                     _connectStateHolder.UpdateState(PutStateReason.PlayerStateChanged, _connectStateHolder.State,
                         AudioOutput.Position);
                     return RequestResult.Success;
@@ -322,10 +324,13 @@ namespace SpotifyLib
         {
             if (active)
             {
-                long now = TimeHelper.CurrentTimeMillisSystem;
-                _connectStateHolder.PutState.IsActive = true;
-                _connectStateHolder.PutState.StartedPlayingAt = (ulong) now;
-                Debug.WriteLine("Device is now active. ts: {0}", now);
+                if (!_connectStateHolder.PutState.IsActive)
+                {
+                    long now = TimeHelper.CurrentTimeMillisSystem;
+                    _connectStateHolder.PutState.IsActive = true;
+                    _connectStateHolder.PutState.StartedPlayingAt = (ulong) now;
+                    Debug.WriteLine("Device is now active. ts: {0}", now);
+                }
             }
             else
             {
