@@ -33,8 +33,9 @@ namespace SpotifyLib.Models.Player
                 case AudioFile.Types.Format.OggVorbis320:
                 case AudioFile.Types.Format.Aac48:
                     return AudioQuality.VERY_HIGH;
+                
                 default:
-                    throw new ArgumentException("Unknown format: " + format);
+                    return AudioQuality.NORMAL;
             }
         }
 

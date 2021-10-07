@@ -833,6 +833,10 @@ namespace SpotifyLib
             bool retry = true,
             CancellationToken ct = default)
         {
+            using var ctsT = new CancellationTokenSource();
+            using var linked =
+                CancellationTokenSource.CreateLinkedTokenSource(ct, ctsT.Token);
+
             var r = 
                 Interlocked.Increment(ref AudioKeySequence);
             using var @out = new MemoryStream();
@@ -850,8 +854,10 @@ namespace SpotifyLib
             
             await callback.WaitAsync(ct);
             var key = _audioKeys[r].Item2;
-            if (key != null) return key;
-            if (retry) return await GetAudioKey(gid, fileId, false);
+            if (key != null) 
+                return key;
+            if (retry) 
+                return await GetAudioKey(gid, fileId, false);
             throw new AesKeyException(
                 $"Failed fetching audio key! gid: " +
                 $"{gid.ToByteArray().BytesToHex()}," +

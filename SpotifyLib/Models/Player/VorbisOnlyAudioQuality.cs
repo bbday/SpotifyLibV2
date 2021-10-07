@@ -19,7 +19,8 @@ namespace SpotifyLib.Models.Player
             var matches = AudioQualityHelper.GetMatches(files,
                 preferred);
             var vorbisFile = VorbisOnlyAudioQuality.GetVorbisFile(matches);
-            if (vorbisFile != null) return vorbisFile;
+            if (vorbisFile != null)
+                return vorbisFile;
             vorbisFile = GetVorbisFile(files);
             Debug.WriteLine(vorbisFile != null
                 ? $"Using {vorbisFile.Format} because preferred {preferred} could not be found."

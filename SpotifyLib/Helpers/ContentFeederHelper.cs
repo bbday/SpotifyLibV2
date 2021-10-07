@@ -27,7 +27,7 @@ namespace SpotifyLib.Helpers
         {
             var resp = await (await ApResolver.GetClosestSpClient())
                 .AppendPathSegment(preload ? STORAGE_RESOLVE_INTERACTIVE_PREFETCH : STORAGE_RESOLVE_INTERACTIVE)
-                .AppendPathSegment(fileId.ToByteArray().BytesToHex())
+                .AppendPathSegment(fileId.ToByteArray().BytesToHex().ToLowerInvariant())
                 .WithOAuthBearerToken((await connState.GetToken(ct)).AccessToken)
                 .GetBytesAsync(ct);
 

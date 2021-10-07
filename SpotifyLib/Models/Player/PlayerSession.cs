@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Google.Protobuf;
 using Spotify.Download.Proto;
 using Spotify.Metadata.Proto;
 using SpotifyLib.Helpers;
@@ -78,33 +80,43 @@ namespace SpotifyLib.Models.Player
 
         private static async Task<ChunkedStream> GetCdnStream(SpotifyId id,
             SpotifyConnectionState connState,
-            CancellationToken ct)
+            CancellationToken ct,
+            List<ByteString> ignoreFiles = null)
         {
-            var (track, file) = await GetFile(id, connState,
-                ct);
+            var (track, alternative, file) = await GetFile(id, connState,
+                ct, ignoreFiles);
             //figure out preload.
             var resp =
                 await connState.ResolveStorageInteractive(file.FileId, false, ct);
             switch (resp.Result)
             {
                 case StorageResolveResponse.Types.Result.Cdn:
-                    var audioKey = await connState.GetAudioKey(track.Gid,
-                        resp.Fileid, ct: ct);
+                    var audioKey = await connState.GetAudioKey(alternative.Gid,
+                        file.FileId, ct: ct);
                     var cdnurl = new CdnUrl(file.FileId, new Uri(resp.Cdnurl.First()));
+                    try
+                    {
+                        var chunkResponse = await cdnurl
+                            .GetRequest(connState, 0,
+                                Consts.CHUNK_SIZE - 1);
+                        var contentRange = chunkResponse.Headers["Content-Range"];
+                        if (string.IsNullOrEmpty(contentRange))
+                            throw new Exception("Missing Content-Range header");
 
-                    var chunkResponse = await cdnurl
-                        .GetRequest(connState, 0,
-                            Consts.CHUNK_SIZE - 1);
-                    var contentRange = chunkResponse.Headers["Content-Range"];
-                    if (string.IsNullOrEmpty(contentRange))
-                        throw new Exception("Missing Content-Range header");
+                        var split = contentRange.Split('/');
+                        var size = int.Parse(split[1]);
+                        var chunks = (int) Math.Ceiling((float) size / (float) Consts.CHUNK_SIZE);
 
-                    var split = contentRange.Split('/');
-                    var size = int.Parse(split[1]);
-                    var chunks = (int)Math.Ceiling((float)size / (float)Consts.CHUNK_SIZE);
-
-                    return new ChunkedStream(id, cdnurl, track, audioKey, size, chunks, chunkResponse.Stream,
-                        connState);
+                        return new ChunkedStream(id, cdnurl, track, audioKey, size, chunks, chunkResponse.Stream,
+                            connState);
+                    }
+                    catch (WebException w)
+                    {
+                        Debug.WriteLine($"Couldn't find proper file. ignoring {file.FileId}");
+                        ignoreFiles ??= new List<ByteString>();
+                        ignoreFiles.Add(file.FileId);
+                        return await GetCdnStream(id, connState, ct, ignoreFiles);
+                    }
                 default:
                     //TODO: Figure out what this is?
                     Debugger.Break();
@@ -133,10 +145,12 @@ namespace SpotifyLib.Models.Player
             return false;
         }
 
-        public static async Task<(Track Track, AudioFile File)> GetFile(SpotifyId spotifyId,
+        public static async Task<(Track Track, Track alternativeTrack, AudioFile File)> GetFile(SpotifyId spotifyId,
             SpotifyConnectionState connState,
-            CancellationToken ct = default)
+            CancellationToken ct = default,
+            List<ByteString> ignoreFiles = null)
         {
+            ignoreFiles ??= new List<ByteString>();
             var original = await spotifyId.FetchAsync<Track>(connState, ct);
             
             var track = PickAlternativeIfNecessary(original);
@@ -151,19 +165,22 @@ namespace SpotifyLib.Models.Player
                 throw new FeederException();
             }
 
-            var file = VorbisOnlyAudioQuality.GetFile(track.File.ToList(), AudioQuality.VERY_HIGH);
+            var toPickFiles = track.File.Where(a => !ignoreFiles.Any(j => j == a.FileId))
+                .ToList();
+            var file = VorbisOnlyAudioQuality.GetFile(toPickFiles, AudioQuality.VERY_HIGH);
             if (file == null)
             {
                 Debug.WriteLine("Couldn't find any suitable audio file, available: " + string.Join(Environment.NewLine,
-                    track.File.ToList().Select(z => z.FileId.ToBase64())));
+                    toPickFiles.Select(z => z.FileId.ToBase64())));
                 throw new FeederException();
             }
 
-            return (original, file);
+            return (original, track, file);
         }
         private static Track PickAlternativeIfNecessary(Track track)
         {
-            if (track.File.Count > 0) return track;
+            if (track.File.Count > 0)
+                return track;
 
             return track.Alternative.FirstOrDefault(z => z.File.Count > 0);
         }

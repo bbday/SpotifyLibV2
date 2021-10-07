@@ -2,7 +2,7 @@
 {
     public static class Consts
     {
-        public static readonly int CHUNK_SIZE = 128 * 1024 * 2;
+        public static readonly int CHUNK_SIZE = 128 * 1024;
 
         internal static readonly byte[] ServerKey =
         {
