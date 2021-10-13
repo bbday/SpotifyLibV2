@@ -8,7 +8,7 @@ namespace SpotifyLib.Models.Response.SimpleItems
     {
         [JsonConstructor]
         public SimplePlaylist(string name, List<UrlImage> images, bool collaborative, PublicUser owner, string description,
-            SpotifyId uri, string snapshotId)
+            SpotifyId uri, string snapshotId, FollowerObject followers)
         {
             Name = name;
             Images = images;
@@ -17,6 +17,7 @@ namespace SpotifyLib.Models.Response.SimpleItems
             Description = description;
             Uri = uri;
             SnapshotId = snapshotId;
+            Followers = followers;
         }
 
         [JsonConverter(typeof(UriToSpotifyIdConverter))]
@@ -24,9 +25,21 @@ namespace SpotifyLib.Models.Response.SimpleItems
         public string Name { get;  }
         public List<UrlImage> Images { get;  }
         public bool Collaborative { get;  }
-        public PublicUser Owner { get;  }
+        public PublicUser Owner { get; }
+        public FollowerObject Followers { get; }
         public string Description { get;  }
         [JsonPropertyName("snapshot_id")]
         public string SnapshotId { get; }
+    }
+
+    public readonly struct FollowerObject
+    {
+        [JsonConstructor]
+        public FollowerObject(int total)
+        {
+            Total = total;
+        }
+
+        public int Total { get; }
     }
 }

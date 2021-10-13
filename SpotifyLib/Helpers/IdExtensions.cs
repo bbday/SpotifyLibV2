@@ -10,7 +10,7 @@ namespace SpotifyLib.Helpers
     public static class IdExtensions
     {
         public static async Task<T> FetchAsync<T>(this SpotifyId id,
-            SpotifyConnectionState state,
+            ISpotifyConnectionState state,
             CancellationToken ct)
             where T : IMessage, new()
         {

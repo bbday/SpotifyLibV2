@@ -11,7 +11,7 @@ namespace SpotifyLib.Models
         string Name { get; }
         string DeviceId { get; }
         bool CanChangeVolume { get; }
-        uint Volume { get; }
+        double Volume { get; }
         int VolumeSteps { get; }
     }
     public readonly struct RemoteSpotifyDevice : ISpotifyDevice
@@ -23,7 +23,7 @@ namespace SpotifyLib.Models
             Name = name.Name;
             DeviceId = name.DeviceId;
             IsLocalDevice = name.DeviceId == config.DeviceId;
-            CanChangeVolume = name.Capabilities.DisableVolume;
+            CanChangeVolume = !name.Capabilities.DisableVolume;
             Type = name.DeviceType;
             Volume = name.Volume;
             VolumeSteps = name.Capabilities.VolumeSteps;
@@ -34,7 +34,7 @@ namespace SpotifyLib.Models
         public string DeviceId { get; }
         public bool IsLocalDevice { get; }
         public bool CanChangeVolume { get; }
-        public uint Volume { get; }
+        public double Volume { get; }
         public int VolumeSteps { get; }
 
         public bool Equals(RemoteSpotifyDevice other)

@@ -4,7 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
-using SpotifyLib.Enums;
+    using Base62;
+    using Google.Protobuf;
+    using SpotifyLib.Enums;
 using SpotifyLib.Helpers;
 
 namespace SpotifyLib.Models
@@ -134,7 +136,17 @@ namespace SpotifyLib.Models
             var j = $"spotify:{type.ToString().ToLower()}:" + Encoding.Default.GetString(k);
             return new SpotifyId(j);
         }
+        public string ToHex()
+        {
+            var k = Id.FromBase62();
+            return k.BytesToHex().ToLowerInvariant();
+        }
         private static readonly Base62Test Base62Test
             = Base62Test.CreateInstanceWithInvertedCharacterSet();
+
+        public static SpotifyId FromGid(ByteString albumGid, AudioItemType album)
+        {
+            return SpotifyId.FromHex(albumGid.ToByteArray().BytesToHex(), album);
+        }
     }
 }

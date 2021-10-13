@@ -258,13 +258,19 @@ namespace SpotifyLib.Models.Player
     {
         public SpotifyId Id { get; }
         public Track Track { get; }
-
+        public Episode Episode { get; }
         public TrackOrEpisode(Track track, SpotifyId id)
         {
             Id = id;
             Track = track;
+            Episode = null;
         }
-
+        public TrackOrEpisode(Episode episode, SpotifyId id)
+        {
+            Id = id;
+            Track = null;
+            Episode = episode;
+        }
         public bool Equals(TrackOrEpisode other)
         {
             return Id.Equals(other.Id);

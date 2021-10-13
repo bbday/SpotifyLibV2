@@ -3,9 +3,12 @@ using Spotify;
 
 namespace SpotifyLib
 {
+    /// <summary>
+    /// Please see <see cref="Failed"/> for more info.
+    /// </summary>
     public class SpotifyAuthenticationException : Exception
     {
-        public SpotifyAuthenticationException(APLoginFailed failed) : base(failed.ErrorCode.ToString())
+        internal SpotifyAuthenticationException(APLoginFailed failed) : base(failed.ErrorCode.ToString())
         {
             Failed = failed;
         }

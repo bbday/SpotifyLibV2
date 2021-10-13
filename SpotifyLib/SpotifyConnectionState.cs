@@ -4,20 +4,27 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Flurl;
+using Flurl.Http;
 using Google.Protobuf;
 using Nito.AsyncEx;
 using Org.BouncyCastle.Math;
 using Org.BouncyCastle.Utilities;
 using Spotify;
+using Spotify.Extendedmetadata.Proto;
+using Spotify.Playlist4.Proto;
+using SpotifyLib.Enums;
 using SpotifyLib.Helpers;
 using SpotifyLib.Models;
 using SpotifyLib.Models.Response;
+using SpotifyLib.Models.Response.SimpleItems;
 
 namespace SpotifyLib
 {
@@ -97,7 +104,27 @@ namespace SpotifyLib
         }
     }
 
-    public class SpotifyConnectionState : IDisposable
+    public interface ISpotifyConnectionState
+    {
+        Task<T> SendAndReceiveAsJson<T>(
+            string mercuryUri,
+            MercuryRequestType type = MercuryRequestType.Get,
+            CancellationToken ct = default);
+
+        Task<string> SendAndReceiveAsJsonString(
+            string mercuryUri,
+            MercuryRequestType type = MercuryRequestType.Get,
+            CancellationToken ct = default);
+
+        Task<MercuryToken> GetToken(CancellationToken ct);
+
+        APWelcome ApWelcome { get; }
+        Task<IEnumerable<View<ISpotifyItem>>> GetHome(CancellationToken ct = default);
+        Task<View<ISpotifyItem>> GetView(string view, CancellationToken ct = default);
+        Task<FullPlaylistEverything> FetchEverythingAboutAPlaylist(SpotifyId id, CancellationToken ct = default);
+        Task<BatchedExtensionResponse> FetchTracks(IEnumerable<SpotifyId> @select, CancellationToken ct = default);
+    }
+    public class SpotifyConnectionState : ISpotifyConnectionState, IDisposable
     {
         public readonly string Host;
         public readonly int Port;
@@ -124,6 +151,106 @@ namespace SpotifyLib
         internal Shannon RecvCipher { get; private set; }
         internal Shannon SendCipher { get; private set; }
         public APWelcome ApWelcome { get; private set; }
+
+        public async Task<IEnumerable<View<ISpotifyItem>>> GetHome(CancellationToken ct = default)
+        {
+            //TODO: Country
+            var aTask = "https://api.spotify.com"
+                .AppendPathSegments("v1", "views", "personalized-recommendations")
+                .SetQueryParam("timestamp", "2021-07-18T22:43:42.597Z")
+                .SetQueryParam("platform", "web")
+                .SetQueryParam("content_limit", "10")
+                .SetQueryParam("limit", "20")
+                .SetQueryParam("types", "album,playlist,artist,show,station,episode")
+                .SetQueryParam("image_style", "gradient_overlay")
+                .SetQueryParam("country", "JP")
+                .SetQueryParam("locale", $"{Config.Locale}")
+                .SetQueryParam("market", "from_token")
+                .WithOAuthBearerToken((await GetToken(ct)).AccessToken)
+                .GetBytesAsync(ct);
+
+            var a =
+                ViewDeserializerHelpers.Deserialize(await aTask);
+            return a.Content.Items?.Where(z => z.Id != "nft-home-recently-played").ToList() ??
+                   new List<View<ISpotifyItem>>();
+        }
+
+        public async Task<View<ISpotifyItem>> GetView(string view, CancellationToken ct = default)
+        {
+            var bTask = "https://api.spotify.com"
+                .AppendPathSegments("v1", "views", view)
+                .SetQueryParam("limit", "50")
+                .SetQueryParam("types", "album,playlist,artist,show,station,episode")
+                .SetQueryParam("locale", $"{Config.Locale}")
+                .SetQueryParam("market", "from_token")
+                .WithOAuthBearerToken((await GetToken(ct)).AccessToken)
+                .GetBytesAsync(ct);
+            return ViewDeserializerHelpers.DeserializeSingleView(await bTask);
+        }
+
+        public async Task<FullPlaylistEverything> FetchEverythingAboutAPlaylist(SpotifyId id,
+            CancellationToken ct = default)
+        {
+            static T Deserialize_Int<T>(byte[] data)
+            {
+                return JsonSerializer.Deserialize<T>(new ReadOnlySpan<byte>(data),
+                    ViewDeserializerHelpers.opts);
+            }
+
+            const string fields =
+                "followers(total), images, owner(display_name, id, images, uri), public, uri";
+            const string uri = "https://api.spotify.com/v1/playlists";
+
+            var fetchSimplePlaylistTask = uri
+                .AppendPathSegment(id.Id)
+                .SetQueryParam("fields", fields)
+                .WithOAuthBearerToken((await GetToken(ct)).AccessToken)
+                .GetBytesAsync(ct);
+
+            var spClient = await ApResolver.GetClosestSpClient();
+            var fetchMetadataTask = spClient.AppendPathSegments("playlist", "v2", "playlist", id.Id)
+                .WithOAuthBearerToken((await GetToken(ct)).AccessToken)
+                .GetBytesAsync(ct);
+            await Task.WhenAll(fetchMetadataTask, fetchSimplePlaylistTask);
+
+            var selectedListContent = SelectedListContent.Parser.ParseFrom(await fetchMetadataTask);
+            return new FullPlaylistEverything(selectedListContent,
+                Deserialize_Int<SimplePlaylist>(await fetchSimplePlaylistTask));
+        }
+
+        public async Task<BatchedExtensionResponse> FetchTracks(IEnumerable<SpotifyId> @select,
+            CancellationToken ct = default)
+        {
+            var request = new Spotify.Extendedmetadata.Proto.BatchedEntityRequest();
+            request.EntityRequest.AddRange(@select.Select(a => new EntityRequest
+            {
+                EntityUri = a.Uri,
+                Query =
+                {
+                    new ExtensionQuery
+                    {
+                        ExtensionKind = a.Type switch
+                        {
+                            AudioItemType.Track => ExtensionKind.TrackV4,
+                            AudioItemType.Episode => ExtensionKind.EpisodeV4,
+                            _ => ExtensionKind.UnknownExtension
+                        }
+                    }
+                }
+            }));
+            request.Header = new BatchedEntityRequestHeader
+            {
+                Catalogue = "premium",
+                Country = "JP"
+            };
+            var spclient = await ApResolver.GetClosestSpClient();
+            var metadataResponse = await spclient
+                .AppendPathSegments("extended-metadata", "v0", "extended-metadata")
+                .WithOAuthBearerToken((await GetToken(ct)).AccessToken)
+                .PostAsync(new ByteArrayContent(request.ToByteArray()), cancellationToken: ct);
+            var bts = await metadataResponse.GetBytesAsync();
+            return BatchedExtensionResponse.Parser.ParseFrom(bts);
+        }
 
         public static Task<SpotifyConnectionState> Connect(string host, int port, IAuthenticator authenticator,
             SpotifyConfig config,
